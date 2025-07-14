@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // --- จุดที่แก้ไข: เพิ่มการกรองค่าที่ไม่ต้องการออก ---
         if (dataField === 'Solution') {
             uniqueValues = uniqueValues.filter(item => {
-                return !item.startsWith('439 :') && !item.startsWith('544 :');
+                return !item.startsWith('439 :') && !item.startsWith('544 :') && !item.startsWith('370 :');
             });
         }
         
