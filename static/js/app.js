@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function getCorrectDataField(field) {
-        return field; // Assuming HTML data-field now matches the data keys
+        return field;
     }
 
     function updateTableDisplay() {
@@ -99,9 +99,14 @@ document.addEventListener('DOMContentLoaded', function () {
         const allValues = processedData.map(item => item[dataField]);
         
         let uniqueValues = [...new Set(allValues)].filter(item => item != null && item !== '');
+        
+        // --- จุดที่แก้ไข: เพิ่มการกรองค่าที่ไม่ต้องการออก ---
         if (dataField === 'Solution') {
-            uniqueValues = uniqueValues.filter(item => !item.startsWith('439 :'));
+            uniqueValues = uniqueValues.filter(item => {
+                return !item.startsWith('439 :') && !item.startsWith('544 :');
+            });
         }
+        
         uniqueValues.sort();
 
         filterPanelTitle.textContent = `Actions for ${currentField}`;
@@ -207,7 +212,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (downloadBtn) {
         downloadBtn.addEventListener('click', () => {
-            const reportContainer = document.querySelector('.table-container');
+            const reportContainer = document.getElementById('report-to-capture');
             if (!reportContainer) {
                 console.error('Report container not found!');
                 return;
