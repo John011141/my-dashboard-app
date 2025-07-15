@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let sortState = { field: null, direction: 'none' };
     let currentField = null;
 
-    // --- เพิ่มเข้ามา: ฟังก์ชันสำหรับแปลงข้อความวันที่เป็น Date Object ---
+    // --- ฟังก์ชันสำหรับแปลงข้อความวันที่เป็น Date Object ---
     function parseDate(dateString) {
         if (!dateString || typeof dateString !== 'string') return null;
         const parts = dateString.split(' ');
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return new Date(dateParts[2], dateParts[1] - 1, dateParts[0]);
     }
 
-    // --- เพิ่มเข้ามา: ประมวลผลข้อมูลล่วงหน้าเพื่อกำหนดค่า Remark ---
+    // --- ประมวลผลข้อมูลล่วงหน้าเพื่อกำหนดค่า Remark ---
     fullData.forEach(row => {
         const appointDate = parseDate(row['Appoint Date']);
         const preferDate = parseDate(row['Prefer Date']);
@@ -50,23 +50,58 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const processedData = fullData.filter(row => row['Ack. By']);
 
+    // --- ฟังก์ชันสำหรับกำหนดสีให้คอลัมน์ Remark ---
     function getRemarkClass(remarkText) {
         if (!remarkText) return '';
-        if (remarkText.includes('ปิดงานได้ตามปกติ')) return 'bg-success-subtle text-success-emphasis';
-        if (remarkText.includes('เลื่อนนัดเปลี่ยน PF')) return 'bg-danger-subtle text-danger-emphasis';
-        if (remarkText.includes('ปิดงานก่อน')) return 'bg-warning-subtle text-warning-emphasis';
-        if (remarkText.includes('ปิดงานใน')) return 'bg-info-subtle text-info-emphasis';
+
+        // ตรวจสอบเงื่อนไขที่เฉพาะเจาะจงที่สุดก่อน
+        if (remarkText.includes('เลื่อนนัดเปลี่ยน PF หรือปิดงานหลัง PF ไม่เกิน 4 ชม.')) {
+            return 'bg-warning text-dark'; // สีส้มเข้ม (ใช้สี warning ของ Bootstrap)
+        }
+        
+        // เงื่อนไขอื่นๆ
+        if (remarkText.includes('ปิดงานได้ตามปกติ')) {
+            return 'bg-success-subtle text-success-emphasis'; // สีเขียวอ่อน
+        }
+        if (remarkText.includes('เลื่อนนัดเปลี่ยน PF')) {
+            return 'bg-danger-subtle text-danger-emphasis'; // สีแดงอ่อน (สำหรับกรณีทั่วไป)
+        }
+        if (remarkText.includes('ปิดงานก่อน')) {
+            return 'bg-warning-subtle text-warning-emphasis'; // สีเหลืองอ่อน
+        }
+        if (remarkText.includes('ปิดงานใน')) {
+            return 'bg-info-subtle text-info-emphasis'; // สีฟ้าอ่อน
+        }
         return '';
     }
 
+    // --- เพิ่มตรรกะการสลับสีพื้นหลังแบบกลุ่ม ---
     function renderTable(data) {
         tableBody.innerHTML = '';
         if (data.length === 0) {
             tableBody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-5"><h4>No data found.</h4></td></tr>`;
             return;
         }
+
+        let lastTech = null;
+        let isOddGroup = false;
+
         data.forEach(row => {
             const tr = document.createElement('tr');
+
+            // --- จุดที่แก้ไข: ตรวจสอบว่ากำลังจัดเรียงตามชื่อช่างหรือไม่ ---
+            if (sortState.field === 'Ack. By') {
+                const currentTech = row['Ack. By'];
+                if (currentTech !== lastTech) {
+                    isOddGroup = !isOddGroup; // สลับสีสำหรับกลุ่มใหม่
+                    lastTech = currentTech;
+                }
+                // เพิ่ม class สลับสีถ้าเป็นกลุ่มคี่
+                if (isOddGroup) {
+                    tr.classList.add('table-group-striped');
+                }
+            }
+
             const remarkText = row['Remark'] || '';
             const remarkClass = getRemarkClass(remarkText);
             tr.innerHTML = `
@@ -247,7 +282,9 @@ document.addEventListener('DOMContentLoaded', function () {
             html2canvas(reportContainer, {
                 scale: 2, 
                 useCORS: true,
-                backgroundColor: '#ffffff'
+                // Removed backgroundColor: '#ffffff' to allow html2canvas to capture the rendered CSS background colors (e.g., striped table rows).
+                // If a specific background color is needed for transparent areas not covered by content,
+                // consider setting it to 'transparent' or the desired fallback color based on your CSS.
             }).then(canvas => {
                 const link = document.createElement('a');
                 link.download = 'Job_Report.png';
