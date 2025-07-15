@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function () {
         console.error("Data is not available or invalid. Aborting script.");
         const tableBody = document.getElementById('data-table-body');
         if (tableBody) {
-            tableBody.innerHTML = '<tr><td colspan="9" class="text-center text-danger py-5"><h3>ไม่สามารถโหลดข้อมูลได้</h3><p>โปรดตรวจสอบการเชื่อมต่อและลองรีเฟรชหน้าเว็บอีกครั้ง</p></td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="9" class="text-center text-danger py-5"><h3>ไม่สามารถโหลดข้อมูลได้</h3><p>โปรดตรวจสอบการเชื่อมต่อและลองรีเฟรฟหน้าเว็บอีกครั้ง</p></td></tr>';
         }
         return; // Stop script execution if data is missing
     }
@@ -21,33 +21,50 @@ document.addEventListener('DOMContentLoaded', function () {
     const clearSortBtn = document.getElementById('clear-sort-btn');
     const downloadBtn = document.getElementById('download-report-btn');
 
-    let activeFilters = {};
-    let sortState = { field: null, direction: 'none' };
-    let currentField = null;
+    let activeFilters = {}; 
+    let sortState = { field: null, direction: 'none' }; 
+    let currentField = null; 
 
-    // --- ฟังก์ชันสำหรับแปลงข้อความวันที่เป็น Date Object (คงเดิม) ---
+    // --- ฟังก์ชันสำหรับแปลงข้อความวันที่เป็น Date Object ---
     function parseDate(dateString) {
         if (!dateString || typeof dateString !== 'string') return null;
-        dateString = dateString.trim(); // ลบช่องว่างหน้าหลัง
+        dateString = dateString.trim();
 
         const dateTimeParts = dateString.split(' ');
-        let dateParts = dateTimeParts[0].split('/');
-        let timeParts = (dateTimeParts.length > 1) ? dateTimeParts[1].split(':') : ['00', '00', '00'];
+        let datePartStr = dateTimeParts[0];
+        let timePartStr = dateTimeParts.length > 1 ? dateTimeParts[1] : '00:00:00'; 
 
-        if (dateParts.length !== 3 || timeParts.length !== 3) {
-            if (timeParts.length === 3 && dateParts.length === 1 && !dateParts[0].includes('/')) {
+        let year, month, day, hours, minutes, seconds;
+
+        const dateParts = datePartStr.split('/');
+        if (dateParts.length === 3) {
+            year = parseInt(dateParts[2], 10);
+            month = parseInt(dateParts[1], 10) - 1; 
+            day = parseInt(dateParts[0], 10);
+        } else {
+            if (datePartStr.includes(':')) { 
+                timePartStr = datePartStr; 
                 const today = new Date();
-                return new Date(today.getFullYear(), today.getMonth(), today.getDate(), timeParts[0], timeParts[1], timeParts[2]);
+                year = today.getFullYear();
+                month = today.getMonth();
+                day = today.getDate();
+            } else {
+                return null; 
             }
-            return null;
         }
-        
-        return new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1], timeParts[2]);
+
+        const timeParts = timePartStr.split(':');
+        hours = parseInt(timeParts[0] || '0', 10);
+        minutes = parseInt(timeParts[1] || '0', 10);
+        seconds = parseInt(timeParts[2] || '0', 10); 
+
+        const date = new Date(year, month, day, hours, minutes, seconds);
+        return isNaN(date.getTime()) ? null : date;
     }
 
-    // --- ประมวลผลข้อมูลล่วงหน้าเพื่อกำหนดค่า Remark (ปรับปรุง logic เพื่อคง Remark เดิม) ---
+    // --- ประมวลผลข้อมูลล่วงหน้าเพื่อกำหนดค่า Remark ---
     fullData.forEach(row => {
-        const originalRemark = row['Remark']; // เก็บ Remark ดั้งเดิมไว้
+        const originalRemark = row['Remark']; 
 
         const appointDateStr = row['Appoint Date'];
         const preferDateStr = row['Prefer Date'];
@@ -55,50 +72,71 @@ document.addEventListener('DOMContentLoaded', function () {
         const appointDate = parseDate(appointDateStr);
         const preferDate = parseDate(preferDateStr);
         
-        row['Remark'] = ''; // รีเซ็ต Remark เพื่อคำนวณใหม่ หรือใช้ Remark เดิมที่เก็บไว้
+        let calculatedRemark = '';
+        let remarkSetByLogic = false;
 
-        let remarkSetByLogic = false; // Flag เพื่อตรวจสอบว่า Remark ถูกกำหนดโดย logic แล้วหรือยัง
+        // --- Logic based on Google Sheet Formula and User's explicit request ---
 
-        // 1. ลองคำนวณ Remark จากวันที่ก่อน (ลำดับความสำคัญสูง)
-        if (preferDate instanceof Date && !isNaN(preferDate) && 
-            appointDate instanceof Date && !isNaN(appointDate)) {
-
-            const diffMs = appointDate.getTime() - preferDate.getTime();
-            const diffHours = diffMs / (1000 * 60 * 60);
-
-            if (diffHours >= 0 && diffHours <= 4) {
-                row['Remark'] = 'เลื่อนนัดเปลี่ยน PF หรือปิดงานหลัง PF ไม่เกิน 4 ชม.';
-                remarkSetByLogic = true;
-            } else if (diffHours > 4) {
-                row['Remark'] = 'เลื่อนนัดเปลี่ยน PF';
-                remarkSetByLogic = true;
-            } else if (diffHours < 0) {
-                row['Remark'] = 'ปิดงานได้ตามปกติ'; 
+        // Case 1: User's explicit request: Prefer Date < Appoint Date
+        if (preferDate instanceof Date && !isNaN(preferDate.getTime()) && 
+            appointDate instanceof Date && !isNaN(appointDate.getTime())) {
+            
+            if (preferDate.getTime() < appointDate.getTime()) {
+                calculatedRemark = 'เลื่อนนัดเปลี่ยน PF';
                 remarkSetByLogic = true;
             }
-        } 
+        }
 
-        // 2. หาก Remark ยังไม่ได้ถูกกำหนดด้วย logic วันที่ ให้ลองใช้ Remark ดั้งเดิม
-        if (!remarkSetByLogic && originalRemark) {
-            // เพิ่มเงื่อนไข Remark ดั้งเดิมที่คุณต้องการคงไว้
-            if (originalRemark.includes('ปิดงานใน 24 ชม. จาก Create') ||
-                originalRemark.includes('ปิดงานก่อน ')) { // ตรวจสอบคำว่า 'ปิดงานก่อน'
-                row['Remark'] = originalRemark; // ใช้ Remark ดั้งเดิม
+        if (!remarkSetByLogic) {
+            // Case 2: Appoint Date is blank (from GS formula)
+            if (!appointDateStr || appointDate === null || isNaN(appointDate.getTime())) {
+                calculatedRemark = 'ปิดงานใน 24 ชม. จาก Create';
+                remarkSetByLogic = true;
+            } 
+            // Case 3: Prefer Date is blank (from GS formula)
+            else if (!preferDateStr || preferDate === null || isNaN(preferDate.getTime())) {
+                if (appointDate instanceof Date && !isNaN(appointDate.getTime())) {
+                    const futureAppointDate = new Date(appointDate.getTime() + (4 * 60 * 60 * 1000));
+                    const formattedFutureAppointDate = `${futureAppointDate.getDate().toString().padStart(2, '0')}/${(futureAppointDate.getMonth() + 1).toString().padStart(2, '0')}/${futureAppointDate.getFullYear()} ${futureAppointDate.getHours().toString().padStart(2, '0')}:${futureAppointDate.getMinutes().toString().padStart(2, '0')}`;
+                    calculatedRemark = `ปิดงานก่อน ${formattedFutureAppointDate}`;
+                    remarkSetByLogic = true;
+                } else {
+                    calculatedRemark = 'วันที่ไม่ถูกต้อง/ไม่ครบถ้วน'; 
+                    remarkSetByLogic = true;
+                }
+            } 
+            // Case 4: Both dates are valid and not covered by Case 1 (i.e., PreferDate >= AppointDate)
+            else if (preferDate instanceof Date && !isNaN(preferDate.getTime()) && 
+                     appointDate instanceof Date && !isNaN(appointDate.getTime())) {
+                
+                if (preferDate.getTime() === appointDate.getTime()) {
+                    calculatedRemark = 'ปิดงานได้ตามปกติ';
+                    remarkSetByLogic = true;
+                } else {
+                    calculatedRemark = 'เลื่อนนัดเปลี่ยน PF หรือปิดงานหลัง PF ไม่เกิน 4 ชม.';
+                    remarkSetByLogic = true;
+                }
+            }
+            // Case 5: Fallback for invalid/missing date strings not covered by specific blank checks
+            else if (appointDateStr || preferDateStr) { 
+                calculatedRemark = 'วันที่ไม่ถูกต้อง/ไม่ครบถ้วน';
                 remarkSetByLogic = true;
             }
-            // หากมี Remark ดั้งเดิมอื่นๆ ที่ต้องการคงไว้ ให้เพิ่มเงื่อนไขที่นี่
         }
 
-        // 3. Fallback: หากยังไม่มี Remark และมีข้อมูลวันที่ต้นฉบับแต่ parse ไม่ได้ (ลำดับความสำคัญต่ำสุด)
-        if (!remarkSetByLogic && (appointDateStr || preferDateStr)) { 
-            // ถ้ามี string วันที่แต่ parse ไม่ได้ หรือมีแค่บางส่วน
-             row['Remark'] = 'วันที่ไม่ถูกต้อง/ไม่ครบถ้วน';
-             remarkSetByLogic = true;
+        // --- Final assignment to row['Remark'] ---
+        if (remarkSetByLogic) {
+            row['Remark'] = calculatedRemark;
+        } else {
+            if (originalRemark && (originalRemark.includes('ปิดงานใน 24 ชม. จาก Create') || originalRemark.includes('ปิดงานก่อน ') || originalRemark.includes('วันที่ไม่ถูกต้อง/ไม่ครบถ้วน'))) {
+                row['Remark'] = originalRemark;
+            } else {
+                row['Remark'] = ''; 
+            }
         }
-        // หาก Remark ยังว่างอยู่หลังจากทุกเงื่อนไข (เช่น ไม่มีข้อมูลวันที่ทั้งคู่) จะยังคงเป็น ''
     });
 
-    // **** แก้ไขตรงนี้: เพิ่มเงื่อนไขการกรองแถวที่ไม่ต้องการแสดงผลออกไป (รวม Solution "544", "559" และคำว่า "Proactive") ****
+    // **** นำเงื่อนไขการกรองข้อมูลเริ่มต้นกลับมา ****
     const processedData = fullData.filter(row => {
         // เงื่อนไข 1: ต้องมี Ack. By
         if (!row['Ack. By']) {
@@ -106,26 +144,23 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         // ตรวจสอบ Solution เพื่อกรองแถวที่ไม่ต้องการ
         if (row['Solution']) {
-            const solutionText = row['Solution'].toLowerCase(); // แปลงเป็นตัวพิมพ์เล็กเพื่อเปรียบเทียบ
+            const solutionText = row['Solution'].toLowerCase();
             
-            // กรอง Solution "559 : ย้ายจุด/เดินสายภายในบ้าน ประเภทเดินสายลอยตีกิ๊บ จุดละ1000 บาท 20เมตร (รวม VAT)"
             if (solutionText.includes('559 : ย้ายจุด/เดินสายภายในบ้าน ประเภทเดินสายลอยตีกิ๊บ จุดละ1000 บาท 20เมตร (รวม vat)')) {
                 return false;
             }
-            // กรอง Solution "544 : Proactive ensure Fault ค่าสัญญาณดี"
             if (solutionText.includes('544 : proactive ensure fault ค่าสัญญาณดี')) {
                 return false;
             }
-            // กรอง Solution ที่มีคำว่า "Proactive" (ไม่ว่าจะอยู่ตรงไหน)
             if (solutionText.includes('proactive')) {
                 return false;
             }
         }
-        
-        return true; // เก็บแถวที่ผ่านเงื่อนไขทั้งหมด
+        return true;
     });
+    console.log('Processed Data (after initial filtering):', processedData); // Debugging log
 
-    // --- ฟังก์ชันสำหรับกำหนดสีให้คอลัมน์ Remark (ปรับให้รองรับ Remark แบบใหม่) ---
+    // --- ฟังก์ชันสำหรับกำหนดสีให้คอลัมน์ Remark ---
     function getRemarkClass(remarkText) {
         if (!remarkText) return '';
 
@@ -139,20 +174,19 @@ document.addEventListener('DOMContentLoaded', function () {
         if (remarkText.includes('เลื่อนนัดเปลี่ยน PF')) {
             return 'bg-danger-subtle text-danger-emphasis';
         }
-        // **** เพิ่ม Remark ใหม่จากภาพตัวอย่าง (ปิดงานใน 24 ชม., ปิดงานก่อน) ****
         if (remarkText.includes('ปิดงานใน 24 ชม. จาก Create')) {
-            return 'bg-info-subtle text-info-emphasis'; // สีฟ้าอ่อน
+            return 'bg-info-subtle text-info-emphasis';
         }
-        if (remarkText.includes('ปิดงานก่อน')) { // ใช้ .includes เพื่อจับ 'ปิดงานก่อน [วันที่]'
-            return 'bg-warning-subtle text-warning-emphasis'; // สีเหลือง/ส้มอ่อน (ตามภาพ)
+        if (remarkText.includes('ปิดงานก่อน')) {
+            return 'bg-warning-subtle text-warning-emphasis';
         }
         if (remarkText.includes('วันที่ไม่ถูกต้อง/ไม่ครบถ้วน')) { 
-            return 'bg-secondary-subtle text-secondary-emphasis'; // สีเทาอ่อนสำหรับข้อผิดพลาด
+            return 'bg-secondary-subtle text-secondary-emphasis';
         }
         return '';
     }
 
-    // --- ฟังก์ชัน renderTable (คงเดิมจากเวอร์ชันล่าสุด) ---
+    // --- ฟังก์ชัน renderTable ---
     function renderTable(data) {
         tableBody.innerHTML = '';
         if (data.length === 0) {
@@ -161,18 +195,17 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         let tempTableBody = document.createDocumentFragment();
-        let isEvenRow = false; // ใช้สำหรับสลับสีพื้นหลังแถว
+        let isEvenRow = false;
 
         data.forEach((row) => {
             const tr = document.createElement('tr');
             
-            // เพิ่ม class สีพื้นหลังแถวสลับกันที่นี่
             if (isEvenRow) {
                 tr.classList.add('row-dark-gray');
             } else {
                 tr.classList.add('row-light-gray');
             }
-            isEvenRow = !isEvenRow; // สลับค่าสำหรับแถวถัดไป
+            isEvenRow = !isEvenRow;
             
             const remarkText = row['Remark'] || '';
             const remarkClass = getRemarkClass(remarkText);
@@ -204,7 +237,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 const dataField = getCorrectDataField(stateField);
                 const filterValue = activeFilters[stateField];
                 if (!filterValue || (Array.isArray(filterValue) && filterValue.length === 0)) return true;
-                return Array.isArray(filterValue) ? filterValue.includes(row[dataField]) : row[dataField] === filterValue;
+                
+                const rowValue = row[dataField];
+                if (Array.isArray(filterValue)) {
+                    return filterValue.includes(rowValue);
+                } else {
+                    return rowValue === filterValue;
+                }
             });
         });
 
@@ -221,10 +260,13 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
         
+        console.log('Active Filters:', activeFilters); 
+        console.log('Result Data (after filtering and sorting):', resultData); 
         renderTable(resultData);
         updateHeaderStyles();
     }
 
+    // **** นำ showFilterPanel กลับมาใช้งานและแก้ไขการสร้างปุ่ม Sort ****
     function showFilterPanel(headerElement) {
         currentField = headerElement.dataset.field;
         const dataField = getCorrectDataField(currentField);
@@ -236,19 +278,70 @@ document.addEventListener('DOMContentLoaded', function () {
         if (dataField === 'Solution') {
             uniqueValues = uniqueValues.filter(item => {
                 const itemLower = item.toLowerCase();
-                // กรอง Solution ที่ไม่ต้องการแสดงใน Filter Panel (อัปเดตให้กรอง Solution ใหม่ด้วย)
                 return !itemLower.includes('439 :') && 
                        !itemLower.includes('544 : proactive ensure fault ค่าสัญญาณดี') && 
                        !itemLower.includes('370 :') && 
                        !itemLower.includes('559 : ย้ายจุด/เดินสายภายในบ้าน ประเภทเดินสายลอยตีกิ๊บ จุดละ1000 บาท 20เมตร (รวม vat)') &&
-                       !itemLower.includes('proactive'); // กรองคำว่า 'proactive' ด้วย
+                       !itemLower.includes('proactive');
             });
         }
         
         uniqueValues.sort();
+        console.log(`Unique Values for ${currentField}:`, uniqueValues); 
 
         filterPanelTitle.textContent = `Actions for ${currentField}`;
-        filterPanelBody.innerHTML = ''; 
+        filterPanelBody.innerHTML = ''; // **** สำคัญ: ล้างเนื้อหาเดิมก่อนเพิ่มใหม่ ****
+
+        // **** สร้างปุ่ม Sort ภายใน Filter Panel ****
+        const sortButtonsHtml = `
+            <div class="filter-panel-sort">
+                <div class="btn-group w-100" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="sort-asc-btn"><i class="fas fa-arrow-up-a-z"></i> A-Z</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="sort-desc-btn"><i class="fas fa-arrow-down-z-a"></i> Z-A</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" id="clear-sort-btn"><i class="fas fa-times"></i> Clear</button>
+                </div>
+            </div>
+        `;
+        // เพิ่มปุ่ม Sort หลัง header
+        // **** แก้ไขตรงนี้: ตรวจสอบว่า filterPanel.querySelector('.filter-panel-header') มีอยู่ก่อนที่จะเพิ่ม HTML ****
+        const filterPanelHeader = filterPanel.querySelector('.filter-panel-header');
+        if (filterPanelHeader) {
+            // **** แก้ไขตรงนี้: ลบองค์ประกอบ sort-panel-sort ที่มีอยู่เดิมออกไปก่อนที่จะเพิ่มใหม่ ****
+            const existingSortPanel = filterPanel.querySelector('.filter-panel-sort');
+            if (existingSortPanel) {
+                existingSortPanel.remove();
+            }
+            filterPanelHeader.insertAdjacentHTML('afterend', sortButtonsHtml); 
+        }
+        
+        // **** Re-attach event listeners for sort buttons (ต้องทำหลังจาก HTML ถูกเพิ่ม) ****
+        // ตรวจสอบว่าปุ่มมีอยู่ก่อนที่จะ attach event listener
+        const newSortAscBtn = document.getElementById('sort-asc-btn');
+        const newSortDescBtn = document.getElementById('sort-desc-btn');
+        const newClearSortBtn = document.getElementById('clear-sort-btn');
+
+        if (newSortAscBtn) {
+            newSortAscBtn.addEventListener('click', () => { 
+                sortState = { field: currentField, direction: 'asc' }; 
+                updateTableDisplay(); 
+                hideFilterPanel(); 
+            });
+        }
+        if (newSortDescBtn) {
+            newSortDescBtn.addEventListener('click', () => { 
+                sortState = { field: currentField, direction: 'desc' }; 
+                updateTableDisplay(); 
+                hideFilterPanel(); 
+            });
+        }
+        if (newClearSortBtn) {
+            newClearSortBtn.addEventListener('click', () => { 
+                sortState = { field: null, direction: 'none' }; 
+                updateTableDisplay(); 
+                hideFilterPanel(); 
+            });
+        }
+
 
         if (filterType === 'multi') {
             uniqueValues.forEach(val => {
@@ -273,14 +366,21 @@ document.addEventListener('DOMContentLoaded', function () {
             filterPanelBody.appendChild(selectEl);
         }
 
-        const rect = headerElement.getBoundingClientRect();
-        filterPanel.style.left = `${rect.left}px`;
-        filterPanel.style.top = `${rect.bottom + window.scrollY}px`;
+        // **** คำนวณตำแหน่ง Filter Panel ให้สัมพันธ์กับ headerElement ****
+        const headerRect = headerElement.getBoundingClientRect();
+        const contentRect = document.querySelector('.content').getBoundingClientRect(); 
+
+        filterPanel.style.position = 'absolute'; 
+        filterPanel.style.left = `${headerRect.left - contentRect.left}px`;
+        filterPanel.style.top = `${headerRect.bottom - contentRect.top + window.scrollY}px`; 
         filterPanel.style.display = 'block';
     }
 
-    function hideFilterPanel() {
-        filterPanel.style.display = 'none';
+    // **** นำ hideFilterPanel กลับมาใช้งาน ****
+    function hideFilterPanel() { 
+        if (filterPanel) { // ตรวจสอบว่า filterPanel มีอยู่ก่อนซ่อน
+            filterPanel.style.display = 'none';
+        }
         currentField = null;
     }
 
@@ -292,8 +392,10 @@ document.addEventListener('DOMContentLoaded', function () {
             
             const icon = h.querySelector('.sort-icon');
             if (icon) {
-                if (sortState.field === field && sortState.direction !== 'none') {
-                    icon.className = sortState.direction === 'asc' ? 'sort-icon fas fa-arrow-up' : 'sort-icon fas fa-arrow-down';
+                if (sortState.field === field && sortState.direction === 'asc') { 
+                    icon.className = 'sort-icon fas fa-arrow-up';
+                } else if (sortState.field === field && sortState.direction === 'desc') { 
+                    icon.className = 'sort-icon fas fa-arrow-down';
                 } else {
                     icon.className = 'sort-icon fas fa-sort';
                 }
@@ -312,6 +414,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    // **** นำ Event Listeners สำหรับปุ่ม Apply/Clear Filter กลับมาใช้งาน ****
     applyFilterBtn.addEventListener('click', () => {
         const filterType = document.querySelector(`th[data-field="${currentField}"]`).dataset.filterType || 'single';
         if (filterType === 'multi') {
@@ -330,22 +433,12 @@ document.addEventListener('DOMContentLoaded', function () {
         hideFilterPanel();
     });
 
-    sortAscBtn.addEventListener('click', () => {
-        sortState = { field: currentField, direction: 'asc' };
-        updateTableDisplay();
-        hideFilterPanel();
-    });
-
-    sortDescBtn.addEventListener('click', () => {
-        sortState = { field: currentField, direction: 'desc' };
-        updateTableDisplay();
-        hideFilterPanel();
-    });
-
-    clearSortBtn.addEventListener('click', () => {
-        sortState = { field: null, direction: 'none' };
-        updateTableDisplay();
-        hideFilterPanel();
+    // **** นำ Event Listener สำหรับคลิกนอก Filter Panel กลับมาใช้งาน ****
+    document.addEventListener('click', (e) => {
+        // ตรวจสอบว่า filterPanel มีอยู่ก่อนที่จะเรียกใช้ .contains
+        if (filterPanel && filterPanel.style.display === 'block' && !filterPanel.contains(e.target) && !e.target.closest('.filterable-header')) {
+            hideFilterPanel();
+        }
     });
 
     if (downloadBtn) {
@@ -363,7 +456,7 @@ document.addEventListener('DOMContentLoaded', function () {
             html2canvas(reportContainer, {
                 scale: 2, 
                 useCORS: true,
-                backgroundColor: '#FFFFFF', // กำหนดสีพื้นหลังเป็นสีขาวอย่างชัดเจน
+                backgroundColor: '#FFFFFF',
             }).then(canvas => {
                 const link = document.createElement('a');
                 link.download = 'Job_Report.png';
@@ -379,12 +472,6 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     }
-
-    document.addEventListener('click', (e) => {
-        if (!filterPanel.contains(e.target) && !e.target.classList.contains('filterable-header')) {
-            hideFilterPanel();
-        }
-    });
 
     updateTableDisplay();
 });
