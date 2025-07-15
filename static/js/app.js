@@ -25,6 +25,13 @@ document.addEventListener('DOMContentLoaded', function () {
     let sortState = { field: null, direction: 'none' };
     let currentField = null;
 
+    // **** ลบตัวแปรและ logic เกี่ยวกับการจัดการกลุ่มช่างและสี tech-color-X ออกจาก app.js ****
+    // เนื่องจากตอนนี้เราใช้ Bootstrap's table-striped ในการจัดการสีแถวแทนแล้ว
+    // let techColorMap = {};
+    // let techColorIndex = 0;
+    // const techColors = ['tech-color-0', 'tech-color-1', 'tech-color-2', 'tech-color-3', 'tech-color-4', 'tech-color-5']; 
+
+
     // --- ฟังก์ชันสำหรับแปลงข้อความวันที่เป็น Date Object ---
     function parseDate(dateString) {
         if (!dateString || typeof dateString !== 'string') return null;
@@ -75,7 +82,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return '';
     }
 
-    // --- เพิ่มตรรกะการสลับสีพื้นหลังแบบกลุ่ม ---
+    // --- ฟังก์ชัน renderTable ที่แก้ไขให้กลับไปใช้การสร้างแถวพื้นฐานและให้ CSS (table-striped) จัดการสีพื้นหลัง ****
     function renderTable(data) {
         tableBody.innerHTML = '';
         if (data.length === 0) {
@@ -83,25 +90,19 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        let lastTech = null;
-        let isOddGroup = false;
+        // **** ลบ logic การจัดการกลุ่มช่างและสี tech-color-X ออกจาก renderTable ****
+        // เพราะเราจะให้ class table-striped ใน HTML เป็นตัวจัดการสีพื้นหลังแถวแทน
+        // let lastTech = null;
+        // let currentGroupRows = []; 
 
-        data.forEach(row => {
+        let tempTableBody = document.createDocumentFragment(); // ใช้ DocumentFragment เพื่อเพิ่มประสิทธิภาพ
+
+        data.forEach((row) => { // ลบ index ออกถ้าไม่ได้ใช้
             const tr = document.createElement('tr');
-
-            // --- จุดที่แก้ไข: ตรวจสอบว่ากำลังจัดเรียงตามชื่อช่างหรือไม่ ---
-            if (sortState.field === 'Ack. By') {
-                const currentTech = row['Ack. By'];
-                if (currentTech !== lastTech) {
-                    isOddGroup = !isOddGroup; // สลับสีสำหรับกลุ่มใหม่
-                    lastTech = currentTech;
-                }
-                // เพิ่ม class สลับสีถ้าเป็นกลุ่มคี่
-                if (isOddGroup) {
-                    tr.classList.add('table-group-striped');
-                }
-            }
-
+            
+            // **** ไม่มีการเพิ่ม class สี tech-color-X หรือ group-bordered ที่นี่แล้ว ****
+            // เนื่องจากเราใช้ table-striped ของ Bootstrap ในการสลับสีแถวแล้ว
+            
             const remarkText = row['Remark'] || '';
             const remarkClass = getRemarkClass(remarkText);
             tr.innerHTML = `
@@ -115,8 +116,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 <td>${row['Prefer Date']||''}</td>
                 <td class="${remarkClass}">${remarkText}</td>
             `;
-            tableBody.appendChild(tr);
+            tempTableBody.appendChild(tr);
+            // ไม่ต้องเก็บแถวใน currentGroupRows อีกต่อไป
         });
+
+        // ไม่ต้องมี logic สำหรับการตีกรอบกลุ่มสุดท้ายแล้ว
+        // if (currentGroupRows.length > 0) {
+        //     currentGroupRows.forEach(r => r.classList.add('group-bordered'));
+        // }
+        
+        tableBody.appendChild(tempTableBody); // เพิ่มทั้งหมดเข้าสู่ DOM ครั้งเดียว
     }
 
     function getCorrectDataField(field) {
