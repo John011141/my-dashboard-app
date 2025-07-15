@@ -129,13 +129,73 @@
             border-top: 1px solid #ddd;
             background-color: #f7f7f7;
         }
-        /* --- เพิ่มเข้ามา: สไตล์สำหรับสีพื้นหลังของช่างแต่ละคน --- */
-        .tech-color-1 { background-color: #e7f3ff; } /* ฟ้าอ่อน */
-        .tech-color-2 { background-color: #e8f5e9; } /* เขียวอ่อน */
-        .tech-color-3 { background-color: #fff8e1; } /* เหลืองอ่อน */
-        .tech-color-4 { background-color: #f3e5f5; } /* ม่วงอ่อน */
-        .tech-color-5 { background-color: #e0f7fa; } /* ฟ้าอมเขียวอ่อน */
-        .tech-color-0 { background-color: #f5f5f5; } /* เทาอ่อนมาก */
+        
+        /* --- คอมเมนต์/ลบสไตล์สำหรับสีพื้นหลังของช่างแต่ละคนที่ไม่ใช้แล้ว --- */
+        /* .tech-color-1 { background-color: #e7f3ff; } 
+        .tech-color-2 { background-color: #e8f5e9; } 
+        .tech-color-3 { background-color: #fff8e1; } 
+        .tech-color-4 { background-color: #f3e5f5; } 
+        .tech-color-5 { background-color: #e0f7fa; } 
+        .tech-color-0 { background-color: #f5f5f5; } */
+
+        /* **** ปรับแต่งสีสลับของแถวสำหรับ table-striped ให้เป็นขาวสลับชมพูอ่อนตามภาพ **** */
+        .table-striped > tbody > tr:nth-of-type(odd) {
+            background-color: #FFFFFF; /* ขาว */
+        }
+        .table-striped > tbody > tr:nth-of-type(even) {
+            background-color: #F8D0D8; /* ชมพู/แดงอ่อนมาก */
+        }
+
+        /* **** ปรับปรุงการ hover ให้เป็นสีพื้นฐานของ Bootstrap หรือสีโปร่งแสง **** */
+        .table-hover > tbody > tr:hover {
+            background-color: rgba(0, 0, 0, 0.075); /* สีเทาอ่อนแบบโปร่งแสง */
+        }
+
+        /* **** คอมเมนต์/ลบสไตล์ที่เกี่ยวข้องกับการตีกรอบกลุ่มช่างที่ไม่ใช้แล้ว **** */
+        /* .group-bordered {
+            border-left: 3px solid #007bff;
+            border-right: 3px solid #007bff;
+        }
+        .table {
+            border-collapse: separate; 
+            border-spacing: 0; 
+        }
+        .table tbody tr td,
+        .table tbody tr th {
+            border-top: 1px solid #dee2e6;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .table tbody tr:first-child.group-bordered td,
+        .table tbody tr:first-child.group-bordered th {
+            border-top: none; 
+        }
+        .table tbody tr:last-child.group-bordered td,
+        .table tbody tr:last-child.group-bordered th {
+            border-bottom: none;
+        }
+        .group-bordered + .group-bordered {
+             border-top: none !important;
+        } */
+
+        /* **** เพิ่ม !important ให้กับคลาสสีพื้นหลังของ Remark และ text-dark เพื่อให้มั่นใจในการแสดงผล **** */
+        .bg-warning {
+             background-color: #ffc107 !important; /* สีเหลือง Bootstrap warning */
+        }
+        .bg-warning-subtle {
+            background-color: #fff3cd !important; /* สีเหลืองอ่อน Bootstrap warning subtle */
+        }
+        .bg-danger-subtle {
+            background-color: #f8d7da !important; /* สีแดงอ่อน Bootstrap danger subtle */
+        }
+        .bg-success-subtle {
+            background-color: #d1e7dd !important; /* สีเขียวอ่อน Bootstrap success subtle */
+        }
+        .bg-info-subtle {
+            background-color: #cfe2ff !important; /* สีฟ้าอ่อน Bootstrap info subtle */
+        }
+        .text-dark {
+            color: #212529 !important; /* สีข้อความเป็นสีดำเพื่อให้ตัดกับสีพื้นหลัง */
+        }
     </style>
 </head>
 <body>
@@ -162,19 +222,18 @@
             </div>
 
             <div class="table-container" id="report-to-capture">
-                <table class="table table-hover align-middle">
+                <table class="table table-hover align-middle table-striped">
                     <thead class="table-dark">
                         <tr>
-                            <th>Product Id</th>
-                            <th class="filterable-header" data-field="Queue">Queue<span class="sort-icon"></span></th>
-                            <th>Create Date</th>
-                            <th class="filterable-header" data-field="Action Type" data-filter-type="multi">Action Type<span class="sort-icon"></span></th>
-                            <th class="filterable-header" data-field="Solution" data-filter-type="multi">Solution<span class="sort-icon"></span></th>
-                            <th class="filterable-header" data-field="Ack. By" data-filter-type="multi">Ack. By<span class="sort-icon"></span></th>
-                            <th>Appoint Date</th>
-                            <th>Prefer Date</th>
-                            <th class="filterable-header" data-field="Remark" data-filter-type="multi">Remark<span class="sort-icon"></span></th>
-                          
+                            <th scope="col">Product Id</th>
+                            <th scope="col" class="filterable-header" data-field="Queue">Queue<span class="sort-icon"></span></th>
+                            <th scope="col">Create Date</th>
+                            <th scope="col" class="filterable-header" data-field="Action Type" data-filter-type="multi">Action Type<span class="sort-icon"></span></th>
+                            <th scope="col" class="filterable-header" data-field="Solution" data-filter-type="multi">Solution<span class="sort-icon"></span></th>
+                            <th scope="col" class="filterable-header" data-field="Ack. By" data-filter-type="multi">Ack. By<span class="sort-icon"></span></th>
+                            <th scope="col">Appoint Date</th>
+                            <th scope="col">Prefer Date</th>
+                            <th scope="col" class="filterable-header" data-field="Remark" data-filter-type="multi">Remark<span class="sort-icon"></span></th>
                         </tr>
                     </thead>
                     <tbody id="data-table-body">
