@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function () {
     
     const applyFilterBtn = document.getElementById('apply-filter-btn');
     const clearFilterBtn = document.getElementById('clear-filter-btn');
-    const sortAscBtn = document.getElementById('sort-asc-btn');
+    const sortAscBtn = document.getElementById('sort-asc-btn'); 
     const sortDescBtn = document.getElementById('sort-desc-btn');
     const clearSortBtn = document.getElementById('clear-sort-btn');
     const downloadBtn = document.getElementById('download-report-btn');
@@ -25,64 +25,134 @@ document.addEventListener('DOMContentLoaded', function () {
     let sortState = { field: null, direction: 'none' };
     let currentField = null;
 
-    // **** ลบตัวแปรและ logic เกี่ยวกับการจัดการกลุ่มช่างและสี tech-color-X ออกจาก app.js ****
-    // เนื่องจากตอนนี้เราใช้ Bootstrap's table-striped ในการจัดการสีแถวแทนแล้ว
-    // let techColorMap = {};
-    // let techColorIndex = 0;
-    // const techColors = ['tech-color-0', 'tech-color-1', 'tech-color-2', 'tech-color-3', 'tech-color-4', 'tech-color-5']; 
-
-
-    // --- ฟังก์ชันสำหรับแปลงข้อความวันที่เป็น Date Object ---
+    // --- ฟังก์ชันสำหรับแปลงข้อความวันที่เป็น Date Object (คงเดิม) ---
     function parseDate(dateString) {
         if (!dateString || typeof dateString !== 'string') return null;
-        const parts = dateString.split(' ');
-        if (parts.length < 1) return null;
-        const dateParts = parts[0].split('/');
-        if (dateParts.length !== 3) return null;
-        // รูปแบบวันที่คือ DD/MM/YYYY, ต้องเรียงใหม่เป็น YYYY, MM-1, DD สำหรับ JavaScript
-        return new Date(dateParts[2], dateParts[1] - 1, dateParts[0]);
+        dateString = dateString.trim(); // ลบช่องว่างหน้าหลัง
+
+        const dateTimeParts = dateString.split(' ');
+        let dateParts = dateTimeParts[0].split('/');
+        let timeParts = (dateTimeParts.length > 1) ? dateTimeParts[1].split(':') : ['00', '00', '00'];
+
+        if (dateParts.length !== 3 || timeParts.length !== 3) {
+            if (timeParts.length === 3 && dateParts.length === 1 && !dateParts[0].includes('/')) {
+                const today = new Date();
+                return new Date(today.getFullYear(), today.getMonth(), today.getDate(), timeParts[0], timeParts[1], timeParts[2]);
+            }
+            return null;
+        }
+        
+        return new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1], timeParts[2]);
     }
 
-    // --- ประมวลผลข้อมูลล่วงหน้าเพื่อกำหนดค่า Remark ---
+    // --- ประมวลผลข้อมูลล่วงหน้าเพื่อกำหนดค่า Remark (ปรับปรุง logic เพื่อคง Remark เดิม) ---
     fullData.forEach(row => {
-        const appointDate = parseDate(row['Appoint Date']);
-        const preferDate = parseDate(row['Prefer Date']);
+        const originalRemark = row['Remark']; // เก็บ Remark ดั้งเดิมไว้
 
-        // ตรวจสอบว่าวันที่ถูกต้องและ Prefer Date มาก่อน Appoint Date หรือไม่
-        if (preferDate && appointDate && preferDate < appointDate) {
-            row['Remark'] = 'เลื่อนนัดเปลี่ยน PF';
+        const appointDateStr = row['Appoint Date'];
+        const preferDateStr = row['Prefer Date'];
+
+        const appointDate = parseDate(appointDateStr);
+        const preferDate = parseDate(preferDateStr);
+        
+        row['Remark'] = ''; // รีเซ็ต Remark เพื่อคำนวณใหม่ หรือใช้ Remark เดิมที่เก็บไว้
+
+        let remarkSetByLogic = false; // Flag เพื่อตรวจสอบว่า Remark ถูกกำหนดโดย logic แล้วหรือยัง
+
+        // 1. ลองคำนวณ Remark จากวันที่ก่อน (ลำดับความสำคัญสูง)
+        if (preferDate instanceof Date && !isNaN(preferDate) && 
+            appointDate instanceof Date && !isNaN(appointDate)) {
+
+            const diffMs = appointDate.getTime() - preferDate.getTime();
+            const diffHours = diffMs / (1000 * 60 * 60);
+
+            if (diffHours >= 0 && diffHours <= 4) {
+                row['Remark'] = 'เลื่อนนัดเปลี่ยน PF หรือปิดงานหลัง PF ไม่เกิน 4 ชม.';
+                remarkSetByLogic = true;
+            } else if (diffHours > 4) {
+                row['Remark'] = 'เลื่อนนัดเปลี่ยน PF';
+                remarkSetByLogic = true;
+            } else if (diffHours < 0) {
+                row['Remark'] = 'ปิดงานได้ตามปกติ'; 
+                remarkSetByLogic = true;
+            }
+        } 
+
+        // 2. หาก Remark ยังไม่ได้ถูกกำหนดด้วย logic วันที่ ให้ลองใช้ Remark ดั้งเดิม
+        if (!remarkSetByLogic && originalRemark) {
+            // เพิ่มเงื่อนไข Remark ดั้งเดิมที่คุณต้องการคงไว้
+            if (originalRemark.includes('ปิดงานใน 24 ชม. จาก Create') ||
+                originalRemark.includes('ปิดงานก่อน ')) { // ตรวจสอบคำว่า 'ปิดงานก่อน'
+                row['Remark'] = originalRemark; // ใช้ Remark ดั้งเดิม
+                remarkSetByLogic = true;
+            }
+            // หากมี Remark ดั้งเดิมอื่นๆ ที่ต้องการคงไว้ ให้เพิ่มเงื่อนไขที่นี่
         }
+
+        // 3. Fallback: หากยังไม่มี Remark และมีข้อมูลวันที่ต้นฉบับแต่ parse ไม่ได้ (ลำดับความสำคัญต่ำสุด)
+        if (!remarkSetByLogic && (appointDateStr || preferDateStr)) { 
+            // ถ้ามี string วันที่แต่ parse ไม่ได้ หรือมีแค่บางส่วน
+             row['Remark'] = 'วันที่ไม่ถูกต้อง/ไม่ครบถ้วน';
+             remarkSetByLogic = true;
+        }
+        // หาก Remark ยังว่างอยู่หลังจากทุกเงื่อนไข (เช่น ไม่มีข้อมูลวันที่ทั้งคู่) จะยังคงเป็น ''
     });
 
+    // **** แก้ไขตรงนี้: เพิ่มเงื่อนไขการกรองแถวที่ไม่ต้องการแสดงผลออกไป (รวม Solution "544", "559" และคำว่า "Proactive") ****
+    const processedData = fullData.filter(row => {
+        // เงื่อนไข 1: ต้องมี Ack. By
+        if (!row['Ack. By']) {
+            return false;
+        }
+        // ตรวจสอบ Solution เพื่อกรองแถวที่ไม่ต้องการ
+        if (row['Solution']) {
+            const solutionText = row['Solution'].toLowerCase(); // แปลงเป็นตัวพิมพ์เล็กเพื่อเปรียบเทียบ
+            
+            // กรอง Solution "559 : ย้ายจุด/เดินสายภายในบ้าน ประเภทเดินสายลอยตีกิ๊บ จุดละ1000 บาท 20เมตร (รวม VAT)"
+            if (solutionText.includes('559 : ย้ายจุด/เดินสายภายในบ้าน ประเภทเดินสายลอยตีกิ๊บ จุดละ1000 บาท 20เมตร (รวม vat)')) {
+                return false;
+            }
+            // กรอง Solution "544 : Proactive ensure Fault ค่าสัญญาณดี"
+            if (solutionText.includes('544 : proactive ensure fault ค่าสัญญาณดี')) {
+                return false;
+            }
+            // กรอง Solution ที่มีคำว่า "Proactive" (ไม่ว่าจะอยู่ตรงไหน)
+            if (solutionText.includes('proactive')) {
+                return false;
+            }
+        }
+        
+        return true; // เก็บแถวที่ผ่านเงื่อนไขทั้งหมด
+    });
 
-    const processedData = fullData.filter(row => row['Ack. By']);
-
-    // --- ฟังก์ชันสำหรับกำหนดสีให้คอลัมน์ Remark ---
+    // --- ฟังก์ชันสำหรับกำหนดสีให้คอลัมน์ Remark (ปรับให้รองรับ Remark แบบใหม่) ---
     function getRemarkClass(remarkText) {
         if (!remarkText) return '';
 
-        // ตรวจสอบเงื่อนไขที่เฉพาะเจาะจงที่สุดก่อน
         if (remarkText.includes('เลื่อนนัดเปลี่ยน PF หรือปิดงานหลัง PF ไม่เกิน 4 ชม.')) {
-            return 'bg-warning text-dark'; // สีส้มเข้ม (ใช้สี warning ของ Bootstrap)
+            return 'bg-warning text-dark';
         }
         
-        // เงื่อนไขอื่นๆ
         if (remarkText.includes('ปิดงานได้ตามปกติ')) {
-            return 'bg-success-subtle text-success-emphasis'; // สีเขียวอ่อน
+            return 'bg-success-subtle text-success-emphasis';
         }
         if (remarkText.includes('เลื่อนนัดเปลี่ยน PF')) {
-            return 'bg-danger-subtle text-danger-emphasis'; // สีแดงอ่อน (สำหรับกรณีทั่วไป)
+            return 'bg-danger-subtle text-danger-emphasis';
         }
-        if (remarkText.includes('ปิดงานก่อน')) {
-            return 'bg-warning-subtle text-warning-emphasis'; // สีเหลืองอ่อน
-        }
-        if (remarkText.includes('ปิดงานใน')) {
+        // **** เพิ่ม Remark ใหม่จากภาพตัวอย่าง (ปิดงานใน 24 ชม., ปิดงานก่อน) ****
+        if (remarkText.includes('ปิดงานใน 24 ชม. จาก Create')) {
             return 'bg-info-subtle text-info-emphasis'; // สีฟ้าอ่อน
+        }
+        if (remarkText.includes('ปิดงานก่อน')) { // ใช้ .includes เพื่อจับ 'ปิดงานก่อน [วันที่]'
+            return 'bg-warning-subtle text-warning-emphasis'; // สีเหลือง/ส้มอ่อน (ตามภาพ)
+        }
+        if (remarkText.includes('วันที่ไม่ถูกต้อง/ไม่ครบถ้วน')) { 
+            return 'bg-secondary-subtle text-secondary-emphasis'; // สีเทาอ่อนสำหรับข้อผิดพลาด
         }
         return '';
     }
 
-    // --- ฟังก์ชัน renderTable ที่แก้ไขให้กลับไปใช้การสร้างแถวพื้นฐานและให้ CSS (table-striped) จัดการสีพื้นหลัง ****
+    // --- ฟังก์ชัน renderTable (คงเดิมจากเวอร์ชันล่าสุด) ---
     function renderTable(data) {
         tableBody.innerHTML = '';
         if (data.length === 0) {
@@ -90,21 +160,23 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        // **** ลบ logic การจัดการกลุ่มช่างและสี tech-color-X ออกจาก renderTable ****
-        // เพราะเราจะให้ class table-striped ใน HTML เป็นตัวจัดการสีพื้นหลังแถวแทน
-        // let lastTech = null;
-        // let currentGroupRows = []; 
+        let tempTableBody = document.createDocumentFragment();
+        let isEvenRow = false; // ใช้สำหรับสลับสีพื้นหลังแถว
 
-        let tempTableBody = document.createDocumentFragment(); // ใช้ DocumentFragment เพื่อเพิ่มประสิทธิภาพ
-
-        data.forEach((row) => { // ลบ index ออกถ้าไม่ได้ใช้
+        data.forEach((row) => {
             const tr = document.createElement('tr');
             
-            // **** ไม่มีการเพิ่ม class สี tech-color-X หรือ group-bordered ที่นี่แล้ว ****
-            // เนื่องจากเราใช้ table-striped ของ Bootstrap ในการสลับสีแถวแล้ว
+            // เพิ่ม class สีพื้นหลังแถวสลับกันที่นี่
+            if (isEvenRow) {
+                tr.classList.add('row-dark-gray');
+            } else {
+                tr.classList.add('row-light-gray');
+            }
+            isEvenRow = !isEvenRow; // สลับค่าสำหรับแถวถัดไป
             
             const remarkText = row['Remark'] || '';
             const remarkClass = getRemarkClass(remarkText);
+            
             tr.innerHTML = `
                 <td>${row['Product Id']||''}</td>
                 <td>${row['Queue']||''}</td>
@@ -117,15 +189,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 <td class="${remarkClass}">${remarkText}</td>
             `;
             tempTableBody.appendChild(tr);
-            // ไม่ต้องเก็บแถวใน currentGroupRows อีกต่อไป
         });
-
-        // ไม่ต้องมี logic สำหรับการตีกรอบกลุ่มสุดท้ายแล้ว
-        // if (currentGroupRows.length > 0) {
-        //     currentGroupRows.forEach(r => r.classList.add('group-bordered'));
-        // }
         
-        tableBody.appendChild(tempTableBody); // เพิ่มทั้งหมดเข้าสู่ DOM ครั้งเดียว
+        tableBody.appendChild(tempTableBody);
     }
 
     function getCorrectDataField(field) {
@@ -169,7 +235,13 @@ document.addEventListener('DOMContentLoaded', function () {
         
         if (dataField === 'Solution') {
             uniqueValues = uniqueValues.filter(item => {
-                return !item.startsWith('439 :') && !item.startsWith('544 :') && !item.startsWith('370 :') && !item.startsWith('559 :');
+                const itemLower = item.toLowerCase();
+                // กรอง Solution ที่ไม่ต้องการแสดงใน Filter Panel (อัปเดตให้กรอง Solution ใหม่ด้วย)
+                return !itemLower.includes('439 :') && 
+                       !itemLower.includes('544 : proactive ensure fault ค่าสัญญาณดี') && 
+                       !itemLower.includes('370 :') && 
+                       !itemLower.includes('559 : ย้ายจุด/เดินสายภายในบ้าน ประเภทเดินสายลอยตีกิ๊บ จุดละ1000 บาท 20เมตร (รวม vat)') &&
+                       !itemLower.includes('proactive'); // กรองคำว่า 'proactive' ด้วย
             });
         }
         
@@ -291,9 +363,7 @@ document.addEventListener('DOMContentLoaded', function () {
             html2canvas(reportContainer, {
                 scale: 2, 
                 useCORS: true,
-                // Removed backgroundColor: '#ffffff' to allow html2canvas to capture the rendered CSS background colors (e.g., striped table rows).
-                // If a specific background color is needed for transparent areas not covered by content,
-                // consider setting it to 'transparent' or the desired fallback color based on your CSS.
+                backgroundColor: '#FFFFFF', // กำหนดสีพื้นหลังเป็นสีขาวอย่างชัดเจน
             }).then(canvas => {
                 const link = document.createElement('a');
                 link.download = 'Job_Report.png';
