@@ -25,6 +25,29 @@ document.addEventListener('DOMContentLoaded', function () {
     let sortState = { field: null, direction: 'none' };
     let currentField = null;
 
+    // --- เพิ่มเข้ามา: ฟังก์ชันสำหรับแปลงข้อความวันที่เป็น Date Object ---
+    function parseDate(dateString) {
+        if (!dateString || typeof dateString !== 'string') return null;
+        const parts = dateString.split(' ');
+        if (parts.length < 1) return null;
+        const dateParts = parts[0].split('/');
+        if (dateParts.length !== 3) return null;
+        // รูปแบบวันที่คือ DD/MM/YYYY, ต้องเรียงใหม่เป็น YYYY, MM-1, DD สำหรับ JavaScript
+        return new Date(dateParts[2], dateParts[1] - 1, dateParts[0]);
+    }
+
+    // --- เพิ่มเข้ามา: ประมวลผลข้อมูลล่วงหน้าเพื่อกำหนดค่า Remark ---
+    fullData.forEach(row => {
+        const appointDate = parseDate(row['Appoint Date']);
+        const preferDate = parseDate(row['Prefer Date']);
+
+        // ตรวจสอบว่าวันที่ถูกต้องและ Prefer Date มาก่อน Appoint Date หรือไม่
+        if (preferDate && appointDate && preferDate < appointDate) {
+            row['Remark'] = 'เลื่อนนัดเปลี่ยน PF';
+        }
+    });
+
+
     const processedData = fullData.filter(row => row['Ack. By']);
 
     function getRemarkClass(remarkText) {
@@ -100,7 +123,6 @@ document.addEventListener('DOMContentLoaded', function () {
         
         let uniqueValues = [...new Set(allValues)].filter(item => item != null && item !== '');
         
-        // --- จุดที่แก้ไข: เพิ่มการกรองค่าที่ไม่ต้องการออก ---
         if (dataField === 'Solution') {
             uniqueValues = uniqueValues.filter(item => {
                 return !item.startsWith('439 :') && !item.startsWith('544 :') && !item.startsWith('370 :') && !item.startsWith('559 :');
