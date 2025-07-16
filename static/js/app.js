@@ -25,40 +25,45 @@ document.addEventListener('DOMContentLoaded', function () {
     let sortState = { field: null, direction: 'none' }; 
     let currentField = null; 
 
-    // --- ฟังก์ชันสำหรับแปลงข้อความวันที่เป็น Date Object ---
+    // --- ฟังก์ชันสำหรับแปลงข้อความวันที่เป็น Date Object (ปรับปรุงให้แข็งแกร่งขึ้น) ---
     function parseDate(dateString) {
         if (!dateString || typeof dateString !== 'string') return null;
         dateString = dateString.trim();
 
         const dateTimeParts = dateString.split(' ');
         let datePartStr = dateTimeParts[0];
+        // กำหนดเวลาเริ่มต้นเป็น 00:00:00 หากไม่มีส่วนเวลา
         let timePartStr = dateTimeParts.length > 1 ? dateTimeParts[1] : '00:00:00'; 
 
         let year, month, day, hours, minutes, seconds;
 
+        // พยายามแยกส่วนวันที่ (dd/mm/yyyy)
         const dateParts = datePartStr.split('/');
         if (dateParts.length === 3) {
             year = parseInt(dateParts[2], 10);
-            month = parseInt(dateParts[1], 10) - 1; 
+            month = parseInt(dateParts[1], 10) - 1; // เดือนใน JavaScript เป็น 0-indexed
             day = parseInt(dateParts[0], 10);
         } else {
+            // หากรูปแบบวันที่ไม่ใช่ dd/mm/yyyy ให้ตรวจสอบว่าเป็นแค่ string เวลาหรือไม่
             if (datePartStr.includes(':')) { 
-                timePartStr = datePartStr; 
-                const today = new Date();
+                timePartStr = datePartStr; // ถือว่าทั้ง string เป็นส่วนของเวลา
+                const today = new Date(); // ใช้วันที่ปัจจุบันเป็นค่าเริ่มต้น
                 year = today.getFullYear();
                 month = today.getMonth();
                 day = today.getDate();
             } else {
-                return null; 
+                return null; // รูปแบบวันที่ไม่ถูกต้อง
             }
         }
 
+        // แยกส่วนเวลา (hh:mm:ss หรือ hh:mm)
         const timeParts = timePartStr.split(':');
         hours = parseInt(timeParts[0] || '0', 10);
         minutes = parseInt(timeParts[1] || '0', 10);
         seconds = parseInt(timeParts[2] || '0', 10); 
 
         const date = new Date(year, month, day, hours, minutes, seconds);
+        // ตรวจสอบว่า Date object ที่สร้างขึ้นมานั้นถูกต้องหรือไม่
         return isNaN(date.getTime()) ? null : date;
     }
 
@@ -75,29 +80,40 @@ document.addEventListener('DOMContentLoaded', function () {
         let calculatedRemark = '';
         let remarkSetByLogic = false;
 
-        // --- Logic based on Google Sheet Formula and User's explicit request ---
+        // --- Logic ตามสูตร Google Sheet และคำขอเฉพาะของผู้ใช้ ---
 
-        // Case 1: User's explicit request: Prefer Date < Appoint Date
-        if (preferDate instanceof Date && !isNaN(preferDate.getTime()) && 
-            appointDate instanceof Date && !isNaN(appointDate.getTime())) {
+        // เงื่อนไข 1: หาก Prefer Date < Appoint Date (ตามคำขอเฉพาะของผู้ใช้)
+        // เปรียบเทียบเฉพาะวันที่ (ไม่สนใจเวลา)
+        const preferDateOnly = preferDate ? new Date(preferDate.getFullYear(), preferDate.getMonth(), preferDate.getDate()) : null;
+        const appointDateOnly = appointDate ? new Date(appointDate.getFullYear(), appointDate.getMonth(), appointDate.getDate()) : null;
+
+        if (preferDateOnly instanceof Date && !isNaN(preferDateOnly.getTime()) && 
+            appointDateOnly instanceof Date && !isNaN(appointDateOnly.getTime())) {
             
-            if (preferDate.getTime() < appointDate.getTime()) {
-                calculatedRemark = 'เลื่อนนัดเปลี่ยน PF';
+            if (preferDateOnly.getTime() < appointDateOnly.getTime()) {
+                calculatedRemark = 'เลื่อนนัดเปลี่ยน PF'; // คำขอเฉพาะของผู้ใช้
                 remarkSetByLogic = true;
             }
         }
 
+        // หากยังไม่ได้กำหนด Remark โดยเงื่อนไขข้างต้น ให้ไล่ตามเงื่อนไขจากสูตร Google Sheet
         if (!remarkSetByLogic) {
-            // Case 2: Appoint Date is blank (from GS formula)
+            // สูตร GS Case 1: Appoint Date เป็นค่าว่าง
             if (!appointDateStr || appointDate === null || isNaN(appointDate.getTime())) {
                 calculatedRemark = 'ปิดงานใน 24 ชม. จาก Create';
                 remarkSetByLogic = true;
             } 
-            // Case 3: Prefer Date is blank (from GS formula)
+            // สูตร GS Case 2: Prefer Date เป็นค่าว่าง (และ Appoint Date ไม่ว่าง)
             else if (!preferDateStr || preferDate === null || isNaN(preferDate.getTime())) {
                 if (appointDate instanceof Date && !isNaN(appointDate.getTime())) {
+                    // คำนวณ Appoint Date + 4 ชั่วโมง
                     const futureAppointDate = new Date(appointDate.getTime() + (4 * 60 * 60 * 1000));
-                    const formattedFutureAppointDate = `${futureAppointDate.getDate().toString().padStart(2, '0')}/${(futureAppointDate.getMonth() + 1).toString().padStart(2, '0')}/${futureAppointDate.getFullYear()} ${futureAppointDate.getHours().toString().padStart(2, '0')}:${futureAppointDate.getMinutes().toString().padStart(2, '0')}`;
+                    const formattedFutureAppointDate = 
+                        `${futureAppointDate.getDate().toString().padStart(2, '0')}/` +
+                        `${(futureAppointDate.getMonth() + 1).toString().padStart(2, '0')}/` +
+                        `${futureAppointDate.getFullYear()} ` +
+                        `${futureAppointDate.getHours().toString().padStart(2, '0')}:` +
+                        `${futureAppointDate.getMinutes().toString().padStart(2, '0')}`;
                     calculatedRemark = `ปิดงานก่อน ${formattedFutureAppointDate}`;
                     remarkSetByLogic = true;
                 } else {
@@ -105,33 +121,38 @@ document.addEventListener('DOMContentLoaded', function () {
                     remarkSetByLogic = true;
                 }
             } 
-            // Case 4: Both dates are valid and not covered by Case 1 (i.e., PreferDate >= AppointDate)
+            // สูตร GS Case 3: Prefer Date เท่ากับ Appoint Date (ทั้งวันที่และเวลา)
             else if (preferDate instanceof Date && !isNaN(preferDate.getTime()) && 
                      appointDate instanceof Date && !isNaN(appointDate.getTime())) {
                 
                 if (preferDate.getTime() === appointDate.getTime()) {
                     calculatedRemark = 'ปิดงานได้ตามปกติ';
                     remarkSetByLogic = true;
-                } else {
+                } 
+                // สูตร GS Case 4: กรณีอื่นๆ ที่วันที่ถูกต้อง (เช่น Prefer Date > Appoint Date หรือ Prefer Date < Appoint Date แต่ไม่เข้าเงื่อนไขแรก)
+                // ซึ่งครอบคลุม "เลื่อนนัดเปลี่ยน PF หรือปิดงานหลัง PF ไม่เกิน 4 ชม."
+                else {
                     calculatedRemark = 'เลื่อนนัดเปลี่ยน PF หรือปิดงานหลัง PF ไม่เกิน 4 ชม.';
                     remarkSetByLogic = true;
                 }
             }
-            // Case 5: Fallback for invalid/missing date strings not covered by specific blank checks
+            // Fallback: หากยังไม่มี Remark และมี string วันที่แต่ parse ไม่ได้
             else if (appointDateStr || preferDateStr) { 
                 calculatedRemark = 'วันที่ไม่ถูกต้อง/ไม่ครบถ้วน';
                 remarkSetByLogic = true;
             }
         }
 
-        // --- Final assignment to row['Remark'] ---
+        // --- การกำหนด Remark สุดท้ายให้กับแถว ---
         if (remarkSetByLogic) {
             row['Remark'] = calculatedRemark;
         } else {
+            // หากไม่มี Remark ที่คำนวณได้ ให้พยายามคง Remark ดั้งเดิมไว้
+            // (เฉพาะ Remark ที่มีข้อความเฉพาะเจาะจงที่เราต้องการเก็บ)
             if (originalRemark && (originalRemark.includes('ปิดงานใน 24 ชม. จาก Create') || originalRemark.includes('ปิดงานก่อน ') || originalRemark.includes('วันที่ไม่ถูกต้อง/ไม่ครบถ้วน'))) {
                 row['Remark'] = originalRemark;
             } else {
-                row['Remark'] = ''; 
+                row['Remark'] = ''; // ค่าเริ่มต้นหากไม่มีอะไรตรง
             }
         }
     });
@@ -303,10 +324,8 @@ document.addEventListener('DOMContentLoaded', function () {
             </div>
         `;
         // เพิ่มปุ่ม Sort หลัง header
-        // **** แก้ไขตรงนี้: ตรวจสอบว่า filterPanel.querySelector('.filter-panel-header') มีอยู่ก่อนที่จะเพิ่ม HTML ****
         const filterPanelHeader = filterPanel.querySelector('.filter-panel-header');
         if (filterPanelHeader) {
-            // **** แก้ไขตรงนี้: ลบองค์ประกอบ sort-panel-sort ที่มีอยู่เดิมออกไปก่อนที่จะเพิ่มใหม่ ****
             const existingSortPanel = filterPanel.querySelector('.filter-panel-sort');
             if (existingSortPanel) {
                 existingSortPanel.remove();
@@ -315,7 +334,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         
         // **** Re-attach event listeners for sort buttons (ต้องทำหลังจาก HTML ถูกเพิ่ม) ****
-        // ตรวจสอบว่าปุ่มมีอยู่ก่อนที่จะ attach event listener
         const newSortAscBtn = document.getElementById('sort-asc-btn');
         const newSortDescBtn = document.getElementById('sort-desc-btn');
         const newClearSortBtn = document.getElementById('clear-sort-btn');
