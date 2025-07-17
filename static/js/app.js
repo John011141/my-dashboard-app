@@ -16,9 +16,6 @@ document.addEventListener('DOMContentLoaded', function () {
     
     const applyFilterBtn = document.getElementById('apply-filter-btn');
     const clearFilterBtn = document.getElementById('clear-filter-btn');
-    const sortAscBtn = document.getElementById('sort-asc-btn'); 
-    const sortDescBtn = document.getElementById('sort-desc-btn');
-    const clearSortBtn = document.getElementById('clear-sort-btn');
     const downloadBtn = document.getElementById('download-report-btn');
 
     let activeFilters = {}; 
@@ -65,13 +62,10 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- ประมวลผลข้อมูลล่วงหน้าเพื่อกำหนดค่า Remark ---
     fullData.forEach(row => {
         const originalRemark = row['Remark']; 
-
         const appointDateStr = row['Appoint Date'];
         const preferDateStr = row['Prefer Date'];
-
         const appointDate = parseDate(appointDateStr);
         const preferDate = parseDate(preferDateStr);
-        
         let calculatedRemark = '';
         let remarkSetByLogic = false;
 
@@ -80,7 +74,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (preferDateOnly instanceof Date && !isNaN(preferDateOnly.getTime()) && 
             appointDateOnly instanceof Date && !isNaN(appointDateOnly.getTime())) {
-            
             if (preferDateOnly.getTime() < appointDateOnly.getTime()) {
                 calculatedRemark = 'เลื่อนนัดเปลี่ยน PF';
                 remarkSetByLogic = true;
@@ -110,7 +103,6 @@ document.addEventListener('DOMContentLoaded', function () {
             } 
             else if (preferDate instanceof Date && !isNaN(preferDate.getTime()) && 
                      appointDate instanceof Date && !isNaN(appointDate.getTime())) {
-                
                 if (preferDate.getTime() === appointDate.getTime()) {
                     calculatedRemark = 'ปิดงานได้ตามปกติ';
                     remarkSetByLogic = true;
@@ -137,53 +129,59 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    processedData = fullData.filter(row => {
-        if (!row['Ack. By']) {
-            return false;
-        }
+    const processedData = fullData.filter(row => {
+        if (!row['Ack. By']) { return false; }
         if (row['Solution']) {
             const solutionText = row['Solution'].toLowerCase();
-            
-            if (solutionText.includes('559 : ย้ายจุด/เดินสายภายในบ้าน ประเภทเดินสายลอยตีกิ๊บ จุดละ1000 บาท 20เมตร (รวม vat)')) {
-                return false;
-            }
-            if (solutionText.includes('544 : proactive ensure fault ค่าสัญญาณดี')) {
-                return false;
-            }
-            if (solutionText.includes('proactive')) {
-                return false;
-            }
+            if (solutionText.includes('559 : ย้ายจุด/เดินสายภายในบ้าน ประเภทเดินสายลอยตีกิ๊บ จุดละ1000 บาท 20เมตร (รวม vat)')) { return false; }
+            if (solutionText.includes('544 : proactive ensure fault ค่าสัญญาณดี')) { return false; }
+            if (solutionText.includes('proactive')) { return false; }
         }
         return true;
     });
 
-    // --- ฟังก์ชันสำหรับกำหนดสีให้คอลัมน์ Remark ---
-    function getRemarkClass(remarkText) {
-        if (!remarkText) return '';
-
-        if (remarkText.includes('เลื่อนนัดเปลี่ยน PF หรือปิดงานหลัง PF ไม่เกิน 4 ชม.')) {
-            return 'bg-warning text-dark';
+    // ========== CODE ที่เพิ่มเข้ามา 1: ฟังก์ชันสร้าง Avatar และ ป้ายสถานะ ==========
+    /**
+     * สร้าง HTML สำหรับ Avatar ของช่าง
+     * @param {string} name - ชื่อเต็มของช่าง
+     * @returns {string} - โค้ด HTML ของ Avatar
+     */
+    function createAvatar(name) {
+        if (!name) return '';
+        const initials = name.replace('ช่าง', '').trim().substring(0, 2);
+        const colors = ['#3498DB', '#E74C3C', '#2ECC71', '#F1C40F', '#9B59B6', '#1ABC9C', '#E67E22', '#34495E'];
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) {
+            hash = name.charCodeAt(i) + ((hash << 5) - hash);
         }
-        
-        if (remarkText.includes('ปิดงานได้ตามปกติ')) {
-            return 'bg-success-subtle text-success-emphasis';
-        }
-        if (remarkText.includes('เลื่อนนัดเปลี่ยน PF')) {
-            return 'bg-danger-subtle text-danger-emphasis';
-        }
-        if (remarkText.includes('ปิดงานใน 24 ชม. จาก Create')) {
-            return 'bg-info-subtle text-info-emphasis';
-        }
-        if (remarkText.includes('ปิดงานก่อน')) {
-            return 'bg-warning-subtle text-warning-emphasis';
-        }
-        if (remarkText.includes('วันที่ไม่ถูกต้อง/ไม่ครบถ้วน')) { 
-            return 'bg-secondary-subtle text-secondary-emphasis';
-        }
-        return '';
+        const color = colors[Math.abs(hash % colors.length)];
+        return `<div style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background-color: ${color}; color: white; font-weight: bold; margin-right: 10px; font-size: 0.9em;">${initials}</div>`;
     }
 
-    // --- ฟังก์ชัน renderTable (นำส่วนสีของช่างออกแล้ว) ---
+    /**
+     * สร้าง HTML ของป้ายสถานะ (Badge) จากข้อความ Remark
+     * @param {string} remarkText - ข้อความในคอลัมน์ Remark
+     * @returns {string} - โค้ด HTML ของป้ายสถานะ
+     */
+    function getRemarkHtml(remarkText) {
+        if (!remarkText) return '';
+        if (remarkText.includes('เลื่อนนัด')) {
+            return `<span class="badge rounded-pill text-warning-emphasis bg-warning-subtle">เลื่อนนัด</span>`;
+        }
+        if (remarkText.includes('ปิดงานได้ตามปกติ')) {
+            return `<span class="badge rounded-pill text-success-emphasis bg-success-subtle">สำเร็จ</span>`;
+        }
+        if (remarkText.includes('ปิดงานใน 24 ชม.')) {
+            return `<span class="badge rounded-pill text-info-emphasis bg-info-subtle">ปิดใน 24 ชม.</span>`;
+        }
+        if (remarkText.includes('ปิดงานก่อน')) {
+            return `<span class="badge rounded-pill text-primary-emphasis bg-primary-subtle">ปิดตามนัดหมาย</span>`;
+        }
+        return `<span class="badge rounded-pill bg-light text-dark">${remarkText}</span>`;
+    }
+    // =====================================================================
+
+    // ========== CODE ที่แก้ไข 2: อัปเดตฟังก์ชัน renderTable ==========
     function renderTable(data) {
         tableBody.innerHTML = '';
         if (data.length === 0) {
@@ -201,9 +199,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         data.forEach((row) => {
             const tr = document.createElement('tr');
-            
+            const techName = row['Ack. By'] || '';
             const remarkText = row['Remark'] || '';
-            const remarkClass = getRemarkClass(remarkText);
             
             tr.innerHTML = `
                 <td>${row['Product Id']||''}</td>
@@ -211,10 +208,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 <td>${row['Create Date']||''}</td>
                 <td>${row['Action Type']||''}</td>
                 <td>${row['Solution']||''}</td>
-                <td>${row['Ack. By']||''}</td>
+                <td class="d-flex align-items-center">${createAvatar(techName)} ${techName}</td>
                 <td>${row['Appoint Date']||''}</td>
                 <td>${row['Prefer Date']||''}</td>
-                <td class="${remarkClass}">${remarkText}</td>
+                <td>${getRemarkHtml(remarkText)}</td>
             `;
             tempTableBody.appendChild(tr);
         });
@@ -222,64 +219,55 @@ document.addEventListener('DOMContentLoaded', function () {
         tableBody.appendChild(tempTableBody);
     }
     
-    // ========== CODE ที่เพิ่มเข้ามา ==========
-    // ฟังก์ชันสำหรับอัปเดตการ์ดสรุปข้อมูล
+    // ========== CODE ที่แก้ไข 3: อัปเดตฟังก์ชัน updateDashboardCards ==========
     function updateDashboardCards(data) {
-        // 1. คำนวณค่าต่างๆ
         const totalJobs = data.length;
-
-        const postponedJobs = data.filter(row => 
-            (row['Remark'] || '').includes('เลื่อนนัด')
-        ).length;
+        const postponedJobs = data.filter(row => (row['Remark'] || '').includes('เลื่อนนัด')).length;
+        const acceptedJobs = data.filter(row => (row['Action Type'] || '').toLowerCase() === 'accepted').length;
         
-        const acceptedJobs = data.filter(row =>
-            (row['Action Type'] || '').toLowerCase() === 'accepted'
-        ).length;
-
-        // การคำนวณงานของวันนี้ต้องเปรียบเทียบเฉพาะ "วันที่" ไม่รวม "เวลา"
         const today = new Date();
-        today.setHours(0, 0, 0, 0); // ตั้งเวลาเป็นเที่ยงคืนเพื่อเปรียบเทียบแค่วัน
+        today.setHours(0, 0, 0, 0);
 
         const todayJobs = data.filter(row => {
-            const appointDate = parseDate(row['Appoint Date']); // ใช้ฟังก์ชัน parseDate ที่คุณมีอยู่แล้ว
+            const appointDate = parseDate(row['Appoint Date']);
             if (!appointDate) return false;
-            
-            appointDate.setHours(0, 0, 0, 0); // ตั้งเวลาของวันนัดหมายเป็นเที่ยงคืนเช่นกัน
+            appointDate.setHours(0, 0, 0, 0);
             return appointDate.getTime() === today.getTime();
         }).length;
 
-        // 2. นำค่าที่คำนวณได้ไปแสดงผลบนหน้าเว็บ
-        document.getElementById('total-jobs-value').textContent = totalJobs;
-        document.getElementById('today-jobs-value').textContent = todayJobs;
-        document.getElementById('postponed-jobs-value').textContent = postponedJobs;
-        document.getElementById('accepted-jobs-value').textContent = acceptedJobs;
+        // ตรวจสอบว่า CountUp.js โหลดมาหรือยัง
+        if (typeof CountUp !== 'undefined') {
+            const options = { duration: 1.5 };
+            new CountUp('total-jobs-value', totalJobs, options).start();
+            new CountUp('today-jobs-value', todayJobs, options).start();
+            new CountUp('postponed-jobs-value', postponedJobs, options).start();
+            new CountUp('accepted-jobs-value', acceptedJobs, options).start();
+        } else {
+            // ถ้าไม่มี CountUp.js ให้แสดงผลตัวเลขธรรมดา
+            document.getElementById('total-jobs-value').textContent = totalJobs;
+            document.getElementById('today-jobs-value').textContent = todayJobs;
+            document.getElementById('postponed-jobs-value').textContent = postponedJobs;
+            document.getElementById('accepted-jobs-value').textContent = acceptedJobs;
+        }
     }
-    // ======================================
+    // =================================================================
 
-
-    function getCorrectDataField(field) {
-        return field;
-    }
+    function getCorrectDataField(field) { return field; }
 
     function updateTableDisplay() {
         let resultData = processedData.filter(row => {
             return Object.keys(activeFilters).every(stateField => {
-                const dataField = getCorrectDataField(stateField);
                 const filterValue = activeFilters[stateField];
                 if (!filterValue || (Array.isArray(filterValue) && filterValue.length === 0)) return true;
-                
-                const rowValue = row[dataField];
-                if (Array.isArray(filterValue)) {
-                    return filterValue.includes(rowValue);
-                } else {
-                    return rowValue === filterValue;
-                }
+                const rowValue = row[stateField];
+                if (Array.isArray(filterValue)) { return filterValue.includes(rowValue); } 
+                else { return rowValue === filterValue; }
             });
         });
 
         if (sortState.field && sortState.direction !== 'none') {
             resultData.sort((a, b) => {
-                const dataField = getCorrectDataField(sortState.field);
+                const dataField = sortState.field;
                 const valA = a[dataField] || '';
                 const valB = b[dataField] || '';
                 if (sortState.direction === 'asc') {
@@ -292,21 +280,15 @@ document.addEventListener('DOMContentLoaded', function () {
         
         renderTable(resultData);
         updateHeaderStyles();
-        
-        // ** เพิ่มการเรียกใช้ฟังก์ชันอัปเดตการ์ดที่นี่ **
-        // เพื่อให้ตัวเลขบนการ์ดเปลี่ยนตามข้อมูลที่กรองแล้ว
         updateDashboardCards(resultData);
     }
 
     function showFilterPanel(headerElement) {
         currentField = headerElement.dataset.field;
-        const dataField = getCorrectDataField(currentField);
         const filterType = headerElement.dataset.filterType || 'single';
-        const allValues = processedData.map(item => item[dataField]);
+        let uniqueValues = [...new Set(processedData.map(item => item[currentField]))].filter(item => item != null && item !== '');
         
-        let uniqueValues = [...new Set(allValues)].filter(item => item != null && item !== '');
-        
-        if (dataField === 'Solution') {
+        if (currentField === 'Solution') {
             uniqueValues = uniqueValues.filter(item => {
                 const itemLower = item.toLowerCase();
                 return !itemLower.includes('439 :') && 
@@ -322,21 +304,11 @@ document.addEventListener('DOMContentLoaded', function () {
         filterPanelTitle.textContent = `Actions for ${currentField}`;
         filterPanelBody.innerHTML = '';
 
-        const sortButtonsHtml = `
-            <div class="filter-panel-sort">
-                <div class="btn-group w-100" role="group">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" id="sort-asc-btn"><i class="fas fa-arrow-up-a-z"></i> A-Z</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" id="sort-desc-btn"><i class="fas fa-arrow-down-z-a"></i> Z-A</button>
-                    <button type="button" class="btn btn-sm btn-outline-danger" id="clear-sort-btn"><i class="fas fa-times"></i> Clear</button>
-                </div>
-            </div>
-        `;
+        const sortButtonsHtml = `<div class="filter-panel-sort"><div class="btn-group w-100" role="group"><button type="button" class="btn btn-sm btn-outline-secondary" id="sort-asc-btn"><i class="fas fa-arrow-up-a-z"></i> A-Z</button><button type="button" class="btn btn-sm btn-outline-secondary" id="sort-desc-btn"><i class="fas fa-arrow-down-z-a"></i> Z-A</button><button type="button" class="btn btn-sm btn-outline-danger" id="clear-sort-btn"><i class="fas fa-times"></i> Clear</button></div></div>`;
         const filterPanelHeader = filterPanel.querySelector('.filter-panel-header');
         if (filterPanelHeader) {
             const existingSortPanel = filterPanel.querySelector('.filter-panel-sort');
-            if (existingSortPanel) {
-                existingSortPanel.remove();
-            }
+            if (existingSortPanel) { existingSortPanel.remove(); }
             filterPanelHeader.insertAdjacentHTML('afterend', sortButtonsHtml); 
         }
         
@@ -344,27 +316,9 @@ document.addEventListener('DOMContentLoaded', function () {
         const newSortDescBtn = document.getElementById('sort-desc-btn');
         const newClearSortBtn = document.getElementById('clear-sort-btn');
 
-        if (newSortAscBtn) {
-            newSortAscBtn.addEventListener('click', () => { 
-                sortState = { field: currentField, direction: 'asc' }; 
-                updateTableDisplay(); 
-                hideFilterPanel(); 
-            });
-        }
-        if (newSortDescBtn) {
-            newSortDescBtn.addEventListener('click', () => { 
-                sortState = { field: currentField, direction: 'desc' }; 
-                updateTableDisplay(); 
-                hideFilterPanel(); 
-            });
-        }
-        if (newClearSortBtn) {
-            newClearSortBtn.addEventListener('click', () => { 
-                sortState = { field: null, direction: 'none' }; 
-                updateTableDisplay(); 
-                hideFilterPanel(); 
-            });
-        }
+        if (newSortAscBtn) { newSortAscBtn.addEventListener('click', () => { sortState = { field: currentField, direction: 'asc' }; updateTableDisplay(); hideFilterPanel(); }); }
+        if (newSortDescBtn) { newSortDescBtn.addEventListener('click', () => { sortState = { field: currentField, direction: 'desc' }; updateTableDisplay(); hideFilterPanel(); }); }
+        if (newClearSortBtn) { newClearSortBtn.addEventListener('click', () => { sortState = { field: null, direction: 'none' }; updateTableDisplay(); hideFilterPanel(); }); }
 
         if (filterType === 'multi') {
             uniqueValues.forEach(val => {
@@ -391,7 +345,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const headerRect = headerElement.getBoundingClientRect();
         const contentRect = document.querySelector('.content').getBoundingClientRect(); 
-
         filterPanel.style.position = 'absolute'; 
         filterPanel.style.left = `${headerRect.left - contentRect.left}px`;
         filterPanel.style.top = `${headerRect.bottom - contentRect.top + window.scrollY}px`; 
@@ -399,9 +352,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function hideFilterPanel() { 
-        if (filterPanel) { 
-            filterPanel.style.display = 'none';
-        }
+        if (filterPanel) { filterPanel.style.display = 'none'; }
         currentField = null;
     }
 
@@ -410,16 +361,11 @@ document.addEventListener('DOMContentLoaded', function () {
             const field = h.dataset.field;
             h.classList.toggle('active-filter', !!(activeFilters[field] && (!Array.isArray(activeFilters[field]) || activeFilters[field].length > 0)));
             h.classList.toggle('active-sort', sortState.field === field && sortState.direction !== 'none');
-            
             const icon = h.querySelector('.sort-icon');
             if (icon) {
-                if (sortState.field === field && sortState.direction === 'asc') { 
-                    icon.className = 'sort-icon fas fa-arrow-up';
-                } else if (sortState.field === field && sortState.direction === 'desc') { 
-                    icon.className = 'sort-icon fas fa-arrow-down';
-                } else {
-                    icon.className = 'sort-icon fas fa-sort';
-                }
+                if (sortState.field === field && sortState.direction === 'asc') { icon.className = 'sort-icon fas fa-arrow-up'; }
+                else if (sortState.field === field && sortState.direction === 'desc') { icon.className = 'sort-icon fas fa-arrow-down'; }
+                else { icon.className = 'sort-icon fas fa-sort'; }
             }
         });
     }
@@ -427,11 +373,8 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.filterable-header').forEach(header => {
         header.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (currentField === e.currentTarget.dataset.field) {
-                hideFilterPanel();
-            } else {
-                showFilterPanel(e.currentTarget);
-            }
+            if (currentField === e.currentTarget.dataset.field) { hideFilterPanel(); }
+            else { showFilterPanel(e.currentTarget); }
         });
     });
 
@@ -462,15 +405,10 @@ document.addEventListener('DOMContentLoaded', function () {
     if (downloadBtn) {
         downloadBtn.addEventListener('click', () => {
             const reportContainer = document.getElementById('report-to-capture');
-            if (!reportContainer) {
-                console.error('Report container not found!');
-                return;
-            }
-
+            if (!reportContainer) { console.error('Report container not found!'); return; }
             const originalText = downloadBtn.innerHTML;
             downloadBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...`;
             downloadBtn.disabled = true;
-
             html2canvas(reportContainer, {
                 scale: 2, 
                 useCORS: true,
@@ -480,17 +418,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 link.download = 'Job_Report.png';
                 link.href = canvas.toDataURL('image/png');
                 link.click();
-
-                downloadBtn.innerHTML = originalText;
-                downloadBtn.disabled = false;
-            }).catch(err => {
-                console.error('oops, something went wrong!', err);
+            }).finally(() => {
                 downloadBtn.innerHTML = originalText;
                 downloadBtn.disabled = false;
             });
         });
     }
 
-    // เรียกใช้ฟังก์ชันแสดงผลหลักครั้งแรก
     updateTableDisplay();
 });
