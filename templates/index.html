@@ -119,6 +119,7 @@
         .bg-success-subtle { background-color: #d1e7dd !important; }
         .bg-info-subtle { background-color: #cfe2ff !important; }
         .text-dark { color: #212529 !important; }
+        .text-danger-emphasis { color: #a52834 !important; }
 
         /* (โค้ดส่วน Filter Panel ไม่มีการเปลี่ยนแปลง) */
         #filter-panel { display: none; position: absolute; width: 280px; background-color: white; border: 1px solid #ddd; border-radius: 0.5rem; box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15); z-index: 1050; }
@@ -203,6 +204,7 @@
                     </div>
                 </div>
             </div>
+
             <div class="table-container" id="report-to-capture">
                 <table class="table table-hover table-striped align-middle">
                     <thead class="table-dark">
@@ -252,6 +254,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/countup.js@2.0.7/dist/countUp.min.js"></script>
     
     <script>
         const fullData = JSON.parse('{{ data | tojson | safe }}');
@@ -289,8 +292,30 @@
                 return true;
             });
 
-            function getRemarkClass(remarkText) { if (!remarkText) return ''; if (remarkText.includes('เลื่อนนัดเปลี่ยน PF หรือปิดงานหลัง PF ไม่เกิน 4 ชม.')) { return 'bg-warning text-dark'; } if (remarkText.includes('ปิดงานได้ตามปกติ')) { return 'bg-success-subtle text-success-emphasis';} if (remarkText.includes('เลื่อนนัดเปลี่ยน PF')) { return 'bg-danger-subtle text-danger-emphasis'; } if (remarkText.includes('ปิดงานใน 24 ชม. จาก Create')) { return 'bg-info-subtle text-info-emphasis'; } if (remarkText.includes('ปิดงานก่อน')) { return 'bg-warning-subtle text-warning-emphasis'; } if (remarkText.includes('วันที่ไม่ถูกต้อง/ไม่ครบถ้วน')) {  return 'bg-secondary-subtle text-secondary-emphasis'; } return ''; }
+            function getRemarkClass(remarkText) {
+                if (!remarkText) return '';
+                if (remarkText === 'เลื่อนนัดเปลี่ยน PF') { return 'bg-danger-subtle text-danger-emphasis'; }
+                if (remarkText.includes('เลื่อนนัดเปลี่ยน PF หรือปิดงานหลัง PF ไม่เกิน 4 ชม.')) { return 'bg-warning text-dark'; }
+                if (remarkText.includes('ปิดงานได้ตามปกติ')) { return 'bg-success-subtle text-success-emphasis'; }
+                if (remarkText.includes('ปิดงานใน 24 ชม. จาก Create')) { return 'bg-info-subtle text-info-emphasis'; }
+                if (remarkText.includes('ปิดงานก่อน')) { return 'bg-warning-subtle text-warning-emphasis'; }
+                if (remarkText.includes('วันที่ไม่ถูกต้อง/ไม่ครบถ้วน')) { return 'bg-secondary-subtle text-secondary-emphasis'; }
+                return '';
+            }
 
+            function createAvatar(name) {
+                if (!name) return '';
+                const initials = name.replace('ช่าง', '').trim().substring(0, 2);
+                const colors = ['#3498DB', '#E74C3C', '#2ECC71', '#F1C40F', '#9B59B6', '#1ABC9C', '#E67E22', '#34495E'];
+                let hash = 0;
+                for (let i = 0; i < name.length; i++) {
+                    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+                }
+                const color = colors[Math.abs(hash % colors.length)];
+                return `<div style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background-color: ${color}; color: white; font-weight: bold; margin-right: 10px; font-size: 0.9em;">${initials}</div>`;
+            }
+
+            // ========== CODE ที่แก้ไข ==========
             function renderTable(data) {
                 tableBody.innerHTML = '';
                 if (data.length === 0) {
@@ -307,16 +332,18 @@
 
                 data.forEach((row) => {
                     const tr = document.createElement('tr');
+                    const techName = row['Ack. By'] || '';
                     const remarkText = row['Remark'] || '';
                     const remarkClass = getRemarkClass(remarkText);
                     
+                    // แก้ไขบรรทัดนี้: เพิ่ม <div> ครอบแล้วใช้ d-flex
                     tr.innerHTML = `
                         <td>${row['Product Id']||''}</td>
                         <td>${row['Queue']||''}</td>
                         <td>${row['Create Date']||''}</td>
                         <td>${row['Action Type']||''}</td>
                         <td>${row['Solution']||''}</td>
-                        <td>${row['Ack. By']||''}</td>
+                        <td><div class="d-flex align-items-center">${createAvatar(techName)} ${techName}</div></td>
                         <td>${row['Appoint Date']||''}</td>
                         <td>${row['Prefer Date']||''}</td>
                         <td class="${remarkClass}">${remarkText}</td>
@@ -342,10 +369,18 @@
                     return appointDate.getTime() === today.getTime();
                 }).length;
 
-                document.getElementById('total-jobs-value').textContent = totalJobs;
-                document.getElementById('today-jobs-value').textContent = todayJobs;
-                document.getElementById('postponed-jobs-value').textContent = postponedJobs;
-                document.getElementById('accepted-jobs-value').textContent = acceptedJobs;
+                if (typeof CountUp !== 'undefined') {
+                    const options = { duration: 1.5 };
+                    new CountUp('total-jobs-value', totalJobs, options).start();
+                    new CountUp('today-jobs-value', todayJobs, options).start();
+                    new CountUp('postponed-jobs-value', postponedJobs, options).start();
+                    new CountUp('accepted-jobs-value', acceptedJobs, options).start();
+                } else {
+                    document.getElementById('total-jobs-value').textContent = totalJobs;
+                    document.getElementById('today-jobs-value').textContent = todayJobs;
+                    document.getElementById('postponed-jobs-value').textContent = postponedJobs;
+                    document.getElementById('accepted-jobs-value').textContent = acceptedJobs;
+                }
             }
 
             function updateTableDisplay() { 
