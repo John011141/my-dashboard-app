@@ -14,12 +14,16 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
     <style>
+        /* ========== ชุดสีและดีไซน์ใหม่ ========== */
         :root {
             --bs-body-font-family: 'Sarabun', sans-serif;
-            --bs-primary: #4a90e2;
+            --bs-primary: #3498DB; /* สีน้ำเงินใหม่ */
             --bs-secondary: #6c757d;
-            --bs-light-gray: #f8f9fa;
-            --bs-dark-blue: #2c3e50;
+            --bs-light-gray: #f4f7f6; /* สีพื้นหลังเว็บใหม่ */
+            --bs-dark-blue: #2C3E50; /* สีน้ำเงินเข้มใหม่ */
+            --bs-success: #2ECC71;
+            --bs-warning: #F1C40F;
+            --bs-danger: #E74C3C;
         }
 
         body {
@@ -27,11 +31,7 @@
             font-family: var(--bs-body-font-family);
         }
 
-        .main-container {
-            display: flex;
-            min-height: 100vh;
-        }
-
+        .main-container { display: flex; min-height: 100vh; }
         .sidebar {
             width: 250px;
             background-color: white;
@@ -39,6 +39,7 @@
             box-shadow: 0 0 15px rgba(0,0,0,0.05);
             display: flex;
             flex-direction: column;
+            border-right: 1px solid #e0e0e0;
         }
         .sidebar .logo {
             font-weight: 700;
@@ -56,146 +57,79 @@
             background-color: #e9ecef;
             color: var(--bs-primary);
         }
-        .sidebar .nav-link i {
-            margin-right: 10px;
-            width: 20px;
-        }
+        .sidebar .nav-link i { margin-right: 10px; width: 20px; }
+        .content { flex-grow: 1; padding: 2rem; }
+        .content-header { margin-bottom: 2rem; }
 
-        .content {
-            flex-grow: 1;
-            padding: 2rem;
+        /* ดีไซน์ใหม่สำหรับ การ์ดสรุปข้อมูล */
+        .kpi-card {
+            background-color: white;
+            border: none;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            border-left: 5px solid var(--bs-secondary); /* สีขอบเริ่มต้น */
         }
-
-        .content-header {
-            margin-bottom: 2rem;
+        .kpi-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
         }
-
+        .kpi-card .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #6c757d;
+            margin-bottom: 0.5rem;
+        }
+        .kpi-card .card-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--bs-dark-blue);
+        }
+        .kpi-card .card-icon {
+            font-size: 2rem;
+            opacity: 0.2;
+        }
+        /* กำหนดสีขอบให้แต่ละการ์ด */
+        .kpi-card.border-primary { border-left-color: var(--bs-primary); }
+        .kpi-card.border-danger { border-left-color: var(--bs-danger); }
+        .kpi-card.border-success { border-left-color: var(--bs-success); }
+        
+        /* ดีไซน์ตาราง */
         .table-container {
             background-color: white;
             border-radius: 0.75rem;
             padding: 1.5rem;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
-
         .table thead th {
             background-color: var(--bs-dark-blue);
             color: white;
             border-bottom-width: 0;
             font-weight: 500;
         }
-
-        .filterable-header {
-            cursor: pointer;
-            position: relative;
-        }
-        .filterable-header:hover {
-            background-color: #3e5165;
-        }
-        .filterable-header.active-filter, .filterable-header.active-sort {
-            background-color: var(--bs-primary);
-        }
-        .sort-icon {
-            margin-left: 8px;
-            opacity: 0.6;
-        }
-
-        #filter-panel {
-            display: none;
-            position: absolute;
-            width: 280px;
-            background-color: white;
-            border: 1px solid #ddd;
-            border-radius: 0.5rem;
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-            z-index: 1050;
-        }
-        .filter-panel-header {
-            padding: 0.75rem 1rem;
-            background-color: #f7f7f7;
-            border-bottom: 1px solid #ddd;
-            font-weight: 700;
-        }
-        .filter-panel-sort {
-            padding: 0.75rem;
-            border-bottom: 1px solid #eee;
-        }
-        .filter-panel-body {
-            padding: 1rem;
-            max-height: 220px;
-            overflow-y: auto;
-        }
-        .filter-panel-footer {
-            padding: 0.75rem;
-            border-top: 1px solid #ddd;
-            background-color: #f7f7f7;
+        .table-hover > tbody > tr:hover {
+            background-color: rgba(0, 0, 0, 0.05) !important;
         }
         
-        /* --- คอมเมนต์/ลบสไตล์สำหรับสีพื้นหลังของช่างแต่ละคนที่ไม่ใช้แล้ว --- */
-        /* .tech-color-1 { background-color: #e7f3ff; } 
-        .tech-color-2 { background-color: #e8f5e9; } 
-        .tech-color-3 { background-color: #fff8e1; } 
-        .tech-color-4 { background-color: #f3e5f5; } 
-        .tech-color-5 { background-color: #e0f7fa; } 
-        .tech-color-0 { background-color: #f5f5f5; } */
+        /* สีสำหรับคอลัมน์ Remark (ยังคงเดิม) */
+        .bg-warning { background-color: #ffc107 !important; }
+        .bg-warning-subtle { background-color: #fff3cd !important; }
+        .bg-danger-subtle { background-color: #f8d7da !important; }
+        .bg-success-subtle { background-color: #d1e7dd !important; }
+        .bg-info-subtle { background-color: #cfe2ff !important; }
+        .text-dark { color: #212529 !important; }
 
-        /* **** ปรับแต่งสีสลับของแถวสำหรับ table-striped ให้เป็นขาวสลับชมพูอ่อนตามภาพ **** */
-        .table-striped > tbody > tr:nth-of-type(odd) {
-            background-color: #FFFFFF; /* ขาว */
-        }
-        .table-striped > tbody > tr:nth-of-type(even) {
-            background-color: #F8D0D8; /* ชมพู/แดงอ่อนมาก */
-        }
-
-        /* **** ปรับปรุงการ hover ให้เป็นสีพื้นฐานของ Bootstrap หรือสีโปร่งแสง **** */
-        .table-hover > tbody > tr:hover {
-            background-color: rgba(0, 0, 0, 0.075); /* สีเทาอ่อนแบบโปร่งแสง */
-        }
-
-        /* **** คอมเมนต์/ลบสไตล์ที่เกี่ยวข้องกับการตีกรอบกลุ่มช่างที่ไม่ใช้แล้ว **** */
-        /* .group-bordered {
-            border-left: 3px solid #007bff;
-            border-right: 3px solid #007bff;
-        }
-        .table {
-            border-collapse: separate; 
-            border-spacing: 0; 
-        }
-        .table tbody tr td,
-        .table tbody tr th {
-            border-top: 1px solid #dee2e6;
-            border-bottom: 1px solid #dee2e6;
-        }
-        .table tbody tr:first-child.group-bordered td,
-        .table tbody tr:first-child.group-bordered th {
-            border-top: none; 
-        }
-        .table tbody tr:last-child.group-bordered td,
-        .table tbody tr:last-child.group-bordered th {
-            border-bottom: none;
-        }
-        .group-bordered + .group-bordered {
-             border-top: none !important;
-        } */
-
-        /* **** เพิ่ม !important ให้กับคลาสสีพื้นหลังของ Remark และ text-dark เพื่อให้มั่นใจในการแสดงผล **** */
-        .bg-warning {
-             background-color: #ffc107 !important; /* สีเหลือง Bootstrap warning */
-        }
-        .bg-warning-subtle {
-            background-color: #fff3cd !important; /* สีเหลืองอ่อน Bootstrap warning subtle */
-        }
-        .bg-danger-subtle {
-            background-color: #f8d7da !important; /* สีแดงอ่อน Bootstrap danger subtle */
-        }
-        .bg-success-subtle {
-            background-color: #d1e7dd !important; /* สีเขียวอ่อน Bootstrap success subtle */
-        }
-        .bg-info-subtle {
-            background-color: #cfe2ff !important; /* สีฟ้าอ่อน Bootstrap info subtle */
-        }
-        .text-dark {
-            color: #212529 !important; /* สีข้อความเป็นสีดำเพื่อให้ตัดกับสีพื้นหลัง */
-        }
+        /* (โค้ดส่วน Filter Panel ไม่มีการเปลี่ยนแปลง) */
+        #filter-panel { display: none; position: absolute; width: 280px; background-color: white; border: 1px solid #ddd; border-radius: 0.5rem; box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15); z-index: 1050; }
+        .filter-panel-header { padding: 0.75rem 1rem; background-color: #f7f7f7; border-bottom: 1px solid #ddd; font-weight: 700; }
+        .filter-panel-sort { padding: 0.75rem; border-bottom: 1px solid #eee; }
+        .filter-panel-body { padding: 1rem; max-height: 220px; overflow-y: auto; }
+        .filter-panel-footer { padding: 0.75rem; border-top: 1px solid #ddd; background-color: #f7f7f7; }
+        .filterable-header { cursor: pointer; position: relative; }
+        .filterable-header:hover { background-color: #3e5165; }
+        .filterable-header.active-filter, .filterable-header.active-sort { background-color: var(--bs-primary); }
+        .sort-icon { margin-left: 8px; opacity: 0.6; }
     </style>
 </head>
 <body>
@@ -213,8 +147,8 @@
                 <div>
                     <h1 class="mb-0">Report 24 Fix by Prefer Date</h1>
                     <p class="text-muted">ภาพรวมของงานทั้งหมด</p>
-                     <p class="text-muted">** อัพเดทข้อมูลทุกวัน เวลา 8:50 น. ** ให้กดรับงานก่อน 9 โมงเช้า<p/>
-                        <p class="text-muted"> Update ข้อมูลล่าสุด เวลา 9:00 น.</p>
+                    <p class="text-muted">** อัพเดทข้อมูลทุกวัน เวลา 8:50 น. ** ให้กดรับงานก่อน 9 โมงเช้า</p>
+                    <p class="last-updated-info">อัปเดตล่าสุดเวลา 9:00 น.</p>
                 </div>
                 <div>
                     <button class="btn btn-primary" id="download-report-btn">
@@ -223,8 +157,54 @@
                 </div>
             </div>
 
+            <div class="row mb-4 g-3">
+                <div class="col-lg-3 col-md-6">
+                    <div class="kpi-card">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="card-title">TOTAL JOBS</h5>
+                                <p class="card-value mb-0" id="total-jobs-value">-</p>
+                            </div>
+                            <i class="fas fa-briefcase card-icon"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="kpi-card border-primary">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="card-title">TODAY'S JOBS</h5>
+                                <p class="card-value mb-0" id="today-jobs-value">-</p>
+                            </div>
+                            <i class="fas fa-calendar-day card-icon"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="kpi-card border-danger">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="card-title">POSTPONED</h5>
+                                <p class="card-value mb-0" id="postponed-jobs-value">-</p>
+                            </div>
+                            <i class="fas fa-clock-rotate-left card-icon"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="kpi-card border-success">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="card-title">ACCEPTED</h5>
+                                <p class="card-value mb-0" id="accepted-jobs-value">-</p>
+                            </div>
+                            <i class="fas fa-check-circle card-icon"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="table-container" id="report-to-capture">
-                <table class="table table-hover align-middle table-striped">
+                <table class="table table-hover table-striped align-middle">
                     <thead class="table-dark">
                         <tr>
                             <th scope="col">Product Id</th>
@@ -242,6 +222,12 @@
                         </tbody>
                 </table>
             </div>
+
+            <footer class="footer mt-auto py-3 bg-light border-top">
+                <div class="container text-center">
+                    <span class="text-muted">Report 24 Fix by Prefer Date| พัฒนาโดย Artid Wiangkham</span>
+                </div>
+            </footer>
         </div>
     </div>
 
@@ -259,8 +245,8 @@
         <div class="filter-panel-body" id="filter-panel-body">
             </div>
         <div class="filter-panel-footer d-flex justify-content-between">
-            <button class="btn btn-primary btn-sm" id="apply-filter-btn"><i class="fas fa-check"></i> Apply Filter</button>
-            <button class="btn btn-secondary btn-sm" id="clear-filter-btn"><i class="fas fa-eraser"></i> Clear Filter</button>
+            <button type="button" class="btn btn-primary btn-sm" id="apply-filter-btn"><i class="fas fa-check"></i> Apply Filter</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="clear-filter-btn"><i class="fas fa-eraser"></i> Clear Filter</button>
         </div>
     </div>
 
@@ -268,17 +254,137 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
-        const fullData = {{ data | tojson | safe }};
-
-        if (!fullData || !Array.isArray(fullData)) {
-             console.error("Data could not be loaded or is invalid.");
-             const tableBody = document.getElementById('data-table-body');
-             if(tableBody) {
-                tableBody.innerHTML = '<tr><td colspan="9" class="text-center text-danger py-5"><h3>ไม่สามารถโหลดข้อมูลได้</h3><p>โปรดตรวจสอบการเชื่อมต่อและลองรีเฟรชหน้าเว็บอีกครั้ง</p></td></tr>';
-            }
-        }
+        const fullData = JSON.parse('{{ data | tojson | safe }}');
     </script>
     
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof fullData === 'undefined' || !Array.isArray(fullData)) {
+                console.error("Data is not available or invalid. Aborting script.");
+                const tableBody = document.getElementById('data-table-body');
+                if (tableBody) {
+                    tableBody.innerHTML = '<tr><td colspan="9" class="text-center text-danger py-5"><h3>ไม่สามารถโหลดข้อมูลได้</h3><p>โปรดตรวจสอบการเชื่อมต่อและลองรีเฟรฟหน้าเว็บอีกครั้ง</p></td></tr>';
+                }
+                return;
+            }
+
+            const tableBody = document.getElementById('data-table-body');
+            const filterPanel = document.getElementById('filter-panel');
+            const filterPanelTitle = document.getElementById('filter-panel-title');
+            const filterPanelBody = document.getElementById('filter-panel-body');
+            const applyFilterBtn = document.getElementById('apply-filter-btn');
+            const clearFilterBtn = document.getElementById('clear-filter-btn');
+            const downloadBtn = document.getElementById('download-report-btn');
+
+            let activeFilters = {}; 
+            let sortState = { field: null, direction: 'none' }; 
+            let currentField = null; 
+
+            function parseDate(dateString) { if (!dateString || typeof dateString !== 'string') return null; dateString = dateString.trim(); const dateTimeParts = dateString.split(' '); let datePartStr = dateTimeParts[0]; let timePartStr = dateTimeParts.length > 1 ? dateTimeParts[1] : '00:00:00'; let year, month, day, hours, minutes, seconds; const dateParts = datePartStr.split('/'); if (dateParts.length === 3) { year = parseInt(dateParts[2], 10); month = parseInt(dateParts[1], 10) - 1; day = parseInt(dateParts[0], 10); } else { if (datePartStr.includes(':')) { timePartStr = datePartStr; const today = new Date(); year = today.getFullYear(); month = today.getMonth(); day = today.getDate(); } else { return null; } } const timeParts = timePartStr.split(':'); hours = parseInt(timeParts[0] || '0', 10); minutes = parseInt(timeParts[1] || '0', 10); seconds = parseInt(timeParts[2] || '0', 10); const date = new Date(year, month, day, hours, minutes, seconds); return isNaN(date.getTime()) ? null : date; }
+            fullData.forEach(row => { const originalRemark = row['Remark']; const appointDateStr = row['Appoint Date']; const preferDateStr = row['Prefer Date']; const appointDate = parseDate(appointDateStr); const preferDate = parseDate(preferDateStr); let calculatedRemark = ''; let remarkSetByLogic = false; const preferDateOnly = preferDate ? new Date(preferDate.getFullYear(), preferDate.getMonth(), preferDate.getDate()) : null; const appointDateOnly = appointDate ? new Date(appointDate.getFullYear(), appointDate.getMonth(), appointDate.getDate()) : null; if (preferDateOnly instanceof Date && !isNaN(preferDateOnly.getTime()) && appointDateOnly instanceof Date && !isNaN(appointDateOnly.getTime())) { if (preferDateOnly.getTime() < appointDateOnly.getTime()) { calculatedRemark = 'เลื่อนนัดเปลี่ยน PF'; remarkSetByLogic = true; } } if (!remarkSetByLogic) { if (!appointDateStr || appointDate === null || isNaN(appointDate.getTime())) { calculatedRemark = 'ปิดงานใน 24 ชม. จาก Create'; remarkSetByLogic = true; } else if (!preferDateStr || preferDate === null || isNaN(preferDate.getTime())) { if (appointDate instanceof Date && !isNaN(appointDate.getTime())) { const futureAppointDate = new Date(appointDate.getTime() + (4 * 60 * 60 * 1000)); const formattedFutureAppointDate = `${futureAppointDate.getDate().toString().padStart(2, '0')}/${(futureAppointDate.getMonth() + 1).toString().padStart(2, '0')}/${futureAppointDate.getFullYear()} ${futureAppointDate.getHours().toString().padStart(2, '0')}:${futureAppointDate.getMinutes().toString().padStart(2, '0')}`; calculatedRemark = `ปิดงานก่อน ${formattedFutureAppointDate}`; remarkSetByLogic = true; } else { calculatedRemark = 'วันที่ไม่ถูกต้อง/ไม่ครบถ้วน'; remarkSetByLogic = true; } } else if (preferDate instanceof Date && !isNaN(preferDate.getTime()) && appointDate instanceof Date && !isNaN(appointDate.getTime())) { if (preferDate.getTime() === appointDate.getTime()) { calculatedRemark = 'ปิดงานได้ตามปกติ'; remarkSetByLogic = true; } else { calculatedRemark = 'เลื่อนนัดเปลี่ยน PF หรือปิดงานหลัง PF ไม่เกิน 4 ชม.'; remarkSetByLogic = true; } } else if (appointDateStr || preferDateStr) { calculatedRemark = 'วันที่ไม่ถูกต้อง/ไม่ครบถ้วน'; remarkSetByLogic = true; } } if (remarkSetByLogic) { row['Remark'] = calculatedRemark; } else { if (originalRemark && (originalRemark.includes('ปิดงานใน 24 ชม. จาก Create') || originalRemark.includes('ปิดงานก่อน ') || originalRemark.includes('วันที่ไม่ถูกต้อง/ไม่ครบถ้วน'))) { row['Remark'] = originalRemark; } else { row['Remark'] = ''; } } });
+            
+            const processedData = fullData.filter(row => {
+                if (!row['Ack. By']) { return false; }
+                if (row['Solution']) { const solutionText = row['Solution'].toLowerCase(); if (solutionText.includes('559 : ย้ายจุด/เดินสายภายในบ้าน ประเภทเดินสายลอยตีกิ๊บ จุดละ1000 บาท 20เมตร (รวม vat)')) { return false; } if (solutionText.includes('544 : proactive ensure fault ค่าสัญญาณดี')) { return false; } if (solutionText.includes('proactive')) { return false; } }
+                return true;
+            });
+
+            function getRemarkClass(remarkText) { if (!remarkText) return ''; if (remarkText.includes('เลื่อนนัดเปลี่ยน PF หรือปิดงานหลัง PF ไม่เกิน 4 ชม.')) { return 'bg-warning text-dark'; } if (remarkText.includes('ปิดงานได้ตามปกติ')) { return 'bg-success-subtle text-success-emphasis';} if (remarkText.includes('เลื่อนนัดเปลี่ยน PF')) { return 'bg-danger-subtle text-danger-emphasis'; } if (remarkText.includes('ปิดงานใน 24 ชม. จาก Create')) { return 'bg-info-subtle text-info-emphasis'; } if (remarkText.includes('ปิดงานก่อน')) { return 'bg-warning-subtle text-warning-emphasis'; } if (remarkText.includes('วันที่ไม่ถูกต้อง/ไม่ครบถ้วน')) {  return 'bg-secondary-subtle text-secondary-emphasis'; } return ''; }
+
+            function renderTable(data) {
+                tableBody.innerHTML = '';
+                if (data.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-5"><h4>No data found.</h4></td></tr>`;
+                    return;
+                }
+                const tempTableBody = document.createDocumentFragment();
+                
+                data.sort((a, b) => {
+                    const techA = a['Ack. By'] || '';
+                    const techB = b['Ack. By'] || '';
+                    return techA.localeCompare(techB, undefined, { numeric: true, sensitivity: 'base' });
+                });
+
+                data.forEach((row) => {
+                    const tr = document.createElement('tr');
+                    const remarkText = row['Remark'] || '';
+                    const remarkClass = getRemarkClass(remarkText);
+                    
+                    tr.innerHTML = `
+                        <td>${row['Product Id']||''}</td>
+                        <td>${row['Queue']||''}</td>
+                        <td>${row['Create Date']||''}</td>
+                        <td>${row['Action Type']||''}</td>
+                        <td>${row['Solution']||''}</td>
+                        <td>${row['Ack. By']||''}</td>
+                        <td>${row['Appoint Date']||''}</td>
+                        <td>${row['Prefer Date']||''}</td>
+                        <td class="${remarkClass}">${remarkText}</td>
+                    `;
+                    tempTableBody.appendChild(tr);
+                });
+                
+                tableBody.appendChild(tempTableBody);
+            }
+
+            function updateDashboardCards(data) {
+                const totalJobs = data.length;
+                const postponedJobs = data.filter(row => (row['Remark'] || '').includes('เลื่อนนัด')).length;
+                const acceptedJobs = data.filter(row => (row['Action Type'] || '').toLowerCase() === 'accepted').length;
+                
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const todayJobs = data.filter(row => {
+                    const appointDate = parseDate(row['Appoint Date']);
+                    if (!appointDate) return false;
+                    appointDate.setHours(0, 0, 0, 0);
+                    return appointDate.getTime() === today.getTime();
+                }).length;
+
+                document.getElementById('total-jobs-value').textContent = totalJobs;
+                document.getElementById('today-jobs-value').textContent = todayJobs;
+                document.getElementById('postponed-jobs-value').textContent = postponedJobs;
+                document.getElementById('accepted-jobs-value').textContent = acceptedJobs;
+            }
+
+            function updateTableDisplay() { 
+                let resultData = processedData.filter(row => { 
+                    return Object.keys(activeFilters).every(stateField => { 
+                        const filterValue = activeFilters[stateField]; 
+                        if (!filterValue || (Array.isArray(filterValue) && filterValue.length === 0)) return true; 
+                        const rowValue = row[stateField]; 
+                        if (Array.isArray(filterValue)) { return filterValue.includes(rowValue); } 
+                        else { return rowValue === filterValue; } 
+                    }); 
+                }); 
+                
+                if (sortState.field && sortState.direction !== 'none') { 
+                    resultData.sort((a, b) => { 
+                        const dataField = sortState.field; 
+                        const valA = a[dataField] || ''; 
+                        const valB = b[dataField] || ''; 
+                        if (sortState.direction === 'asc') { return valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' }); } 
+                        else { return valB.localeCompare(valA, undefined, { numeric: true, sensitivity: 'base' }); } 
+                    }); 
+                } 
+                
+                renderTable(resultData); 
+                updateHeaderStyles();
+                updateDashboardCards(resultData);
+            }
+
+            function showFilterPanel(headerElement) { currentField = headerElement.dataset.field; const filterType = headerElement.dataset.filterType || 'single'; let uniqueValues = [...new Set(processedData.map(item => item[currentField]))].filter(item => item != null && item !== ''); if (currentField === 'Solution') { uniqueValues = uniqueValues.filter(item => { const itemLower = item.toLowerCase(); return !itemLower.includes('439 :') && !itemLower.includes('544 : proactive ensure fault ค่าสัญญาณดี') && !itemLower.includes('370 :') && !itemLower.includes('559 : ย้ายจุด/เดินสายภายในบ้าน ประเภทเดินสายลอยตีกิ๊บ จุดละ1000 บาท 20เมตร (รวม vat)') && !itemLower.includes('proactive'); }); } uniqueValues.sort(); filterPanelTitle.textContent = `Actions for ${currentField}`; filterPanelBody.innerHTML = ''; const sortButtonsHtml = ` <div class="filter-panel-sort"> <div class="btn-group w-100" role="group"> <button type="button" class="btn btn-sm btn-outline-secondary" id="sort-asc-btn"><i class="fas fa-arrow-up-a-z"></i> A-Z</button> <button type="button" class="btn btn-sm btn-outline-secondary" id="sort-desc-btn"><i class="fas fa-arrow-down-z-a"></i> Z-A</button> <button type="button" class="btn btn-sm btn-outline-danger" id="clear-sort-btn"><i class="fas fa-times"></i> Clear</button> </div> </div> `; const filterPanelHeader = filterPanel.querySelector('.filter-panel-header'); if (filterPanelHeader) { const existingSortPanel = filterPanel.querySelector('.filter-panel-sort'); if (existingSortPanel) { existingSortPanel.remove(); } filterPanelHeader.insertAdjacentHTML('afterend', sortButtonsHtml); } const newSortAscBtn = document.getElementById('sort-asc-btn'); const newSortDescBtn = document.getElementById('sort-desc-btn'); const newClearSortBtn = document.getElementById('clear-sort-btn'); if (newSortAscBtn) { newSortAscBtn.addEventListener('click', () => { sortState = { field: currentField, direction: 'asc' }; updateTableDisplay(); hideFilterPanel(); }); } if (newSortDescBtn) { newSortDescBtn.addEventListener('click', () => { sortState = { field: currentField, direction: 'desc' }; updateTableDisplay(); hideFilterPanel(); }); } if (newClearSortBtn) { newClearSortBtn.addEventListener('click', () => { sortState = { field: null, direction: 'none' }; updateTableDisplay(); hideFilterPanel(); }); } if (filterType === 'multi') { uniqueValues.forEach(val => { const isChecked = activeFilters[currentField]?.includes(val) ? 'checked' : ''; filterPanelBody.innerHTML += `<div class="form-check"><input class="form-check-input" type="checkbox" value="${val}" id="check-${val}" ${isChecked}><label class="form-check-label" for="check-${val}">${val}</label></div>`; }); } else { const selectEl = document.createElement('select'); selectEl.className = 'form-select'; const defaultOption = document.createElement('option'); defaultOption.value = ''; defaultOption.textContent = '-- All --'; selectEl.appendChild(defaultOption); const currentFilterValue = activeFilters[currentField] || ''; uniqueValues.forEach(val => { const option = document.createElement('option'); option.value = val; option.textContent = val; if (val === currentFilterValue) option.selected = true; selectEl.appendChild(option); }); filterPanelBody.appendChild(selectEl); } const headerRect = headerElement.getBoundingClientRect(); const contentRect = document.querySelector('.content').getBoundingClientRect(); filterPanel.style.position = 'absolute'; filterPanel.style.left = `${headerRect.left - contentRect.left}px`; filterPanel.style.top = `${headerRect.bottom - contentRect.top + window.scrollY}px`; filterPanel.style.display = 'block'; }
+            function hideFilterPanel() { if (filterPanel) { filterPanel.style.display = 'none'; } currentField = null; }
+            function updateHeaderStyles() { document.querySelectorAll('.filterable-header').forEach(h => { const field = h.dataset.field; h.classList.toggle('active-filter', !!(activeFilters[field] && (!Array.isArray(activeFilters[field]) || activeFilters[field].length > 0))); h.classList.toggle('active-sort', sortState.field === field && sortState.direction !== 'none'); const icon = h.querySelector('.sort-icon'); if (icon) { if (sortState.field === field && sortState.direction === 'asc') { icon.className = 'sort-icon fas fa-arrow-up'; } else if (sortState.field === field && sortState.direction === 'desc') { icon.className = 'sort-icon fas fa-arrow-down'; } else { icon.className = 'sort-icon fas fa-sort'; } } }); }
+            document.querySelectorAll('.filterable-header').forEach(header => { header.addEventListener('click', (e) => { e.stopPropagation(); if (currentField === e.currentTarget.dataset.field) { hideFilterPanel(); } else { showFilterPanel(e.currentTarget); } }); });
+            applyFilterBtn.addEventListener('click', () => { const filterType = document.querySelector(`th[data-field="${currentField}"]`).dataset.filterType || 'single'; if (filterType === 'multi') { const checked = Array.from(filterPanelBody.querySelectorAll('input:checked')).map(cb => cb.value); activeFilters[currentField] = checked; } else { activeFilters[currentField] = filterPanelBody.querySelector('select').value; } updateTableDisplay(); hideFilterPanel(); });
+            clearFilterBtn.addEventListener('click', () => { delete activeFilters[currentField]; updateTableDisplay(); hideFilterPanel(); });
+            document.addEventListener('click', (e) => { if (filterPanel && filterPanel.style.display === 'block' && !filterPanel.contains(e.target) && !e.target.closest('.filterable-header')) { hideFilterPanel(); } });
+            if (downloadBtn) { downloadBtn.addEventListener('click', () => { const reportContainer = document.getElementById('report-to-capture'); if (!reportContainer) { console.error('Report container not found!'); return; } const originalText = downloadBtn.innerHTML; downloadBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...`; downloadBtn.disabled = true; html2canvas(reportContainer, { scale: 2, useCORS: true, backgroundColor: '#FFFFFF', }).then(canvas => { const link = document.createElement('a'); link.download = 'Job_Report.png'; link.href = canvas.toDataURL('image/png'); link.click(); }).finally(() => { downloadBtn.innerHTML = originalText; downloadBtn.disabled = false; }); }); }
+
+            updateTableDisplay();
+        });
+    </script>
 </body>
 </html>
