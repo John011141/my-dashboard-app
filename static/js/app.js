@@ -25,45 +25,40 @@ document.addEventListener('DOMContentLoaded', function () {
     let sortState = { field: null, direction: 'none' }; 
     let currentField = null; 
 
-    // --- ฟังก์ชันสำหรับแปลงข้อความวันที่เป็น Date Object (ปรับปรุงให้แข็งแกร่งขึ้น) ---
+    // --- ฟังก์ชันสำหรับแปลงข้อความวันที่เป็น Date Object ---
     function parseDate(dateString) {
         if (!dateString || typeof dateString !== 'string') return null;
         dateString = dateString.trim();
 
         const dateTimeParts = dateString.split(' ');
         let datePartStr = dateTimeParts[0];
-        // กำหนดเวลาเริ่มต้นเป็น 00:00:00 หากไม่มีส่วนเวลา
         let timePartStr = dateTimeParts.length > 1 ? dateTimeParts[1] : '00:00:00'; 
 
         let year, month, day, hours, minutes, seconds;
 
-        // พยายามแยกส่วนวันที่ (dd/mm/yyyy)
         const dateParts = datePartStr.split('/');
         if (dateParts.length === 3) {
             year = parseInt(dateParts[2], 10);
-            month = parseInt(dateParts[1], 10) - 1; // เดือนใน JavaScript เป็น 0-indexed
+            month = parseInt(dateParts[1], 10) - 1; 
             day = parseInt(dateParts[0], 10);
         } else {
-            // หากรูปแบบวันที่ไม่ใช่ dd/mm/yyyy ให้ตรวจสอบว่าเป็นแค่ string เวลาหรือไม่
             if (datePartStr.includes(':')) { 
-                timePartStr = datePartStr; // ถือว่าทั้ง string เป็นส่วนของเวลา
-                const today = new Date(); // ใช้วันที่ปัจจุบันเป็นค่าเริ่มต้น
+                timePartStr = datePartStr; 
+                const today = new Date();
                 year = today.getFullYear();
                 month = today.getMonth();
                 day = today.getDate();
             } else {
-                return null; // รูปแบบวันที่ไม่ถูกต้อง
+                return null; 
             }
         }
 
-        // แยกส่วนเวลา (hh:mm:ss หรือ hh:mm)
         const timeParts = timePartStr.split(':');
         hours = parseInt(timeParts[0] || '0', 10);
         minutes = parseInt(timeParts[1] || '0', 10);
         seconds = parseInt(timeParts[2] || '0', 10); 
 
         const date = new Date(year, month, day, hours, minutes, seconds);
-        // ตรวจสอบว่า Date object ที่สร้างขึ้นมานั้นถูกต้องหรือไม่
         return isNaN(date.getTime()) ? null : date;
     }
 
@@ -80,10 +75,6 @@ document.addEventListener('DOMContentLoaded', function () {
         let calculatedRemark = '';
         let remarkSetByLogic = false;
 
-        // --- Logic ตามสูตร Google Sheet และคำขอเฉพาะของผู้ใช้ ---
-
-        // เงื่อนไข 1: หาก Prefer Date < Appoint Date (ตามคำขอเฉพาะของผู้ใช้)
-        // เปรียบเทียบเฉพาะวันที่ (ไม่สนใจเวลา)
         const preferDateOnly = preferDate ? new Date(preferDate.getFullYear(), preferDate.getMonth(), preferDate.getDate()) : null;
         const appointDateOnly = appointDate ? new Date(appointDate.getFullYear(), appointDate.getMonth(), appointDate.getDate()) : null;
 
@@ -91,22 +82,18 @@ document.addEventListener('DOMContentLoaded', function () {
             appointDateOnly instanceof Date && !isNaN(appointDateOnly.getTime())) {
             
             if (preferDateOnly.getTime() < appointDateOnly.getTime()) {
-                calculatedRemark = 'เลื่อนนัดเปลี่ยน PF'; // คำขอเฉพาะของผู้ใช้
+                calculatedRemark = 'เลื่อนนัดเปลี่ยน PF';
                 remarkSetByLogic = true;
             }
         }
 
-        // หากยังไม่ได้กำหนด Remark โดยเงื่อนไขข้างต้น ให้ไล่ตามเงื่อนไขจากสูตร Google Sheet
         if (!remarkSetByLogic) {
-            // สูตร GS Case 1: Appoint Date เป็นค่าว่าง
             if (!appointDateStr || appointDate === null || isNaN(appointDate.getTime())) {
                 calculatedRemark = 'ปิดงานใน 24 ชม. จาก Create';
                 remarkSetByLogic = true;
             } 
-            // สูตร GS Case 2: Prefer Date เป็นค่าว่าง (และ Appoint Date ไม่ว่าง)
             else if (!preferDateStr || preferDate === null || isNaN(preferDate.getTime())) {
                 if (appointDate instanceof Date && !isNaN(appointDate.getTime())) {
-                    // คำนวณ Appoint Date + 4 ชั่วโมง
                     const futureAppointDate = new Date(appointDate.getTime() + (4 * 60 * 60 * 1000));
                     const formattedFutureAppointDate = 
                         `${futureAppointDate.getDate().toString().padStart(2, '0')}/` +
@@ -121,7 +108,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     remarkSetByLogic = true;
                 }
             } 
-            // สูตร GS Case 3: Prefer Date เท่ากับ Appoint Date (ทั้งวันที่และเวลา)
             else if (preferDate instanceof Date && !isNaN(preferDate.getTime()) && 
                      appointDate instanceof Date && !isNaN(appointDate.getTime())) {
                 
@@ -129,41 +115,32 @@ document.addEventListener('DOMContentLoaded', function () {
                     calculatedRemark = 'ปิดงานได้ตามปกติ';
                     remarkSetByLogic = true;
                 } 
-                // สูตร GS Case 4: กรณีอื่นๆ ที่วันที่ถูกต้อง (เช่น Prefer Date > Appoint Date หรือ Prefer Date < Appoint Date แต่ไม่เข้าเงื่อนไขแรก)
-                // ซึ่งครอบคลุม "เลื่อนนัดเปลี่ยน PF หรือปิดงานหลัง PF ไม่เกิน 4 ชม."
                 else {
                     calculatedRemark = 'เลื่อนนัดเปลี่ยน PF หรือปิดงานหลัง PF ไม่เกิน 4 ชม.';
                     remarkSetByLogic = true;
                 }
             }
-            // Fallback: หากยังไม่มี Remark และมี string วันที่แต่ parse ไม่ได้
             else if (appointDateStr || preferDateStr) { 
                 calculatedRemark = 'วันที่ไม่ถูกต้อง/ไม่ครบถ้วน';
                 remarkSetByLogic = true;
             }
         }
 
-        // --- การกำหนด Remark สุดท้ายให้กับแถว ---
         if (remarkSetByLogic) {
             row['Remark'] = calculatedRemark;
         } else {
-            // หากไม่มี Remark ที่คำนวณได้ ให้พยายามคง Remark ดั้งเดิมไว้
-            // (เฉพาะ Remark ที่มีข้อความเฉพาะเจาะจงที่เราต้องการเก็บ)
             if (originalRemark && (originalRemark.includes('ปิดงานใน 24 ชม. จาก Create') || originalRemark.includes('ปิดงานก่อน ') || originalRemark.includes('วันที่ไม่ถูกต้อง/ไม่ครบถ้วน'))) {
                 row['Remark'] = originalRemark;
             } else {
-                row['Remark'] = ''; // ค่าเริ่มต้นหากไม่มีอะไรตรง
+                row['Remark'] = ''; 
             }
         }
     });
 
-    // **** นำเงื่อนไขการกรองข้อมูลเริ่มต้นกลับมา ****
-    const processedData = fullData.filter(row => {
-        // เงื่อนไข 1: ต้องมี Ack. By
+    processedData = fullData.filter(row => {
         if (!row['Ack. By']) {
             return false;
         }
-        // ตรวจสอบ Solution เพื่อกรองแถวที่ไม่ต้องการ
         if (row['Solution']) {
             const solutionText = row['Solution'].toLowerCase();
             
@@ -179,7 +156,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         return true;
     });
-    console.log('Processed Data (after initial filtering):', processedData); // Debugging log
 
     // --- ฟังก์ชันสำหรับกำหนดสีให้คอลัมน์ Remark ---
     function getRemarkClass(remarkText) {
@@ -207,7 +183,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return '';
     }
 
-    // --- ฟังก์ชัน renderTable ---
+    // --- ฟังก์ชัน renderTable (นำส่วนสีของช่างออกแล้ว) ---
     function renderTable(data) {
         tableBody.innerHTML = '';
         if (data.length === 0) {
@@ -216,17 +192,15 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         let tempTableBody = document.createDocumentFragment();
-        let isEvenRow = false;
+        
+        data.sort((a, b) => {
+            const techA = a['Ack. By'] || '';
+            const techB = b['Ack. By'] || '';
+            return techA.localeCompare(techB, undefined, { numeric: true, sensitivity: 'base' });
+        });
 
         data.forEach((row) => {
             const tr = document.createElement('tr');
-            
-            if (isEvenRow) {
-                tr.classList.add('row-dark-gray');
-            } else {
-                tr.classList.add('row-light-gray');
-            }
-            isEvenRow = !isEvenRow;
             
             const remarkText = row['Remark'] || '';
             const remarkClass = getRemarkClass(remarkText);
@@ -247,6 +221,41 @@ document.addEventListener('DOMContentLoaded', function () {
         
         tableBody.appendChild(tempTableBody);
     }
+    
+    // ========== CODE ที่เพิ่มเข้ามา ==========
+    // ฟังก์ชันสำหรับอัปเดตการ์ดสรุปข้อมูล
+    function updateDashboardCards(data) {
+        // 1. คำนวณค่าต่างๆ
+        const totalJobs = data.length;
+
+        const postponedJobs = data.filter(row => 
+            (row['Remark'] || '').includes('เลื่อนนัด')
+        ).length;
+        
+        const acceptedJobs = data.filter(row =>
+            (row['Action Type'] || '').toLowerCase() === 'accepted'
+        ).length;
+
+        // การคำนวณงานของวันนี้ต้องเปรียบเทียบเฉพาะ "วันที่" ไม่รวม "เวลา"
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // ตั้งเวลาเป็นเที่ยงคืนเพื่อเปรียบเทียบแค่วัน
+
+        const todayJobs = data.filter(row => {
+            const appointDate = parseDate(row['Appoint Date']); // ใช้ฟังก์ชัน parseDate ที่คุณมีอยู่แล้ว
+            if (!appointDate) return false;
+            
+            appointDate.setHours(0, 0, 0, 0); // ตั้งเวลาของวันนัดหมายเป็นเที่ยงคืนเช่นกัน
+            return appointDate.getTime() === today.getTime();
+        }).length;
+
+        // 2. นำค่าที่คำนวณได้ไปแสดงผลบนหน้าเว็บ
+        document.getElementById('total-jobs-value').textContent = totalJobs;
+        document.getElementById('today-jobs-value').textContent = todayJobs;
+        document.getElementById('postponed-jobs-value').textContent = postponedJobs;
+        document.getElementById('accepted-jobs-value').textContent = acceptedJobs;
+    }
+    // ======================================
+
 
     function getCorrectDataField(field) {
         return field;
@@ -281,13 +290,14 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
         
-        console.log('Active Filters:', activeFilters); 
-        console.log('Result Data (after filtering and sorting):', resultData); 
         renderTable(resultData);
         updateHeaderStyles();
+        
+        // ** เพิ่มการเรียกใช้ฟังก์ชันอัปเดตการ์ดที่นี่ **
+        // เพื่อให้ตัวเลขบนการ์ดเปลี่ยนตามข้อมูลที่กรองแล้ว
+        updateDashboardCards(resultData);
     }
 
-    // **** นำ showFilterPanel กลับมาใช้งานและแก้ไขการสร้างปุ่ม Sort ****
     function showFilterPanel(headerElement) {
         currentField = headerElement.dataset.field;
         const dataField = getCorrectDataField(currentField);
@@ -308,12 +318,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         
         uniqueValues.sort();
-        console.log(`Unique Values for ${currentField}:`, uniqueValues); 
 
         filterPanelTitle.textContent = `Actions for ${currentField}`;
-        filterPanelBody.innerHTML = ''; // **** สำคัญ: ล้างเนื้อหาเดิมก่อนเพิ่มใหม่ ****
+        filterPanelBody.innerHTML = '';
 
-        // **** สร้างปุ่ม Sort ภายใน Filter Panel ****
         const sortButtonsHtml = `
             <div class="filter-panel-sort">
                 <div class="btn-group w-100" role="group">
@@ -323,7 +331,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
             </div>
         `;
-        // เพิ่มปุ่ม Sort หลัง header
         const filterPanelHeader = filterPanel.querySelector('.filter-panel-header');
         if (filterPanelHeader) {
             const existingSortPanel = filterPanel.querySelector('.filter-panel-sort');
@@ -333,7 +340,6 @@ document.addEventListener('DOMContentLoaded', function () {
             filterPanelHeader.insertAdjacentHTML('afterend', sortButtonsHtml); 
         }
         
-        // **** Re-attach event listeners for sort buttons (ต้องทำหลังจาก HTML ถูกเพิ่ม) ****
         const newSortAscBtn = document.getElementById('sort-asc-btn');
         const newSortDescBtn = document.getElementById('sort-desc-btn');
         const newClearSortBtn = document.getElementById('clear-sort-btn');
@@ -360,7 +366,6 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
-
         if (filterType === 'multi') {
             uniqueValues.forEach(val => {
                 const isChecked = activeFilters[currentField]?.includes(val) ? 'checked' : '';
@@ -384,7 +389,6 @@ document.addEventListener('DOMContentLoaded', function () {
             filterPanelBody.appendChild(selectEl);
         }
 
-        // **** คำนวณตำแหน่ง Filter Panel ให้สัมพันธ์กับ headerElement ****
         const headerRect = headerElement.getBoundingClientRect();
         const contentRect = document.querySelector('.content').getBoundingClientRect(); 
 
@@ -394,9 +398,8 @@ document.addEventListener('DOMContentLoaded', function () {
         filterPanel.style.display = 'block';
     }
 
-    // **** นำ hideFilterPanel กลับมาใช้งาน ****
     function hideFilterPanel() { 
-        if (filterPanel) { // ตรวจสอบว่า filterPanel มีอยู่ก่อนซ่อน
+        if (filterPanel) { 
             filterPanel.style.display = 'none';
         }
         currentField = null;
@@ -432,7 +435,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // **** นำ Event Listeners สำหรับปุ่ม Apply/Clear Filter กลับมาใช้งาน ****
     applyFilterBtn.addEventListener('click', () => {
         const filterType = document.querySelector(`th[data-field="${currentField}"]`).dataset.filterType || 'single';
         if (filterType === 'multi') {
@@ -451,9 +453,7 @@ document.addEventListener('DOMContentLoaded', function () {
         hideFilterPanel();
     });
 
-    // **** นำ Event Listener สำหรับคลิกนอก Filter Panel กลับมาใช้งาน ****
     document.addEventListener('click', (e) => {
-        // ตรวจสอบว่า filterPanel มีอยู่ก่อนที่จะเรียกใช้ .contains
         if (filterPanel && filterPanel.style.display === 'block' && !filterPanel.contains(e.target) && !e.target.closest('.filterable-header')) {
             hideFilterPanel();
         }
@@ -491,5 +491,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // เรียกใช้ฟังก์ชันแสดงผลหลักครั้งแรก
     updateTableDisplay();
 });
