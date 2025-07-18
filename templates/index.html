@@ -303,19 +303,30 @@
                 return '';
             }
 
-            function createAvatar(name) {
-                if (!name) return '';
-                const initials = name.replace('ช่าง', '').trim().substring(0, 2);
+            // ========== CODE ที่แก้ไข ==========
+            function createAvatar(fullName) {
+                if (!fullName) return '';
+                const parts = fullName.trim().split(' ');
+                // หาคำแรกที่ไม่ใช่ตัวเลข (ซึ่งก็คือชื่อ)
+                const namePart = parts.find(p => isNaN(p.charAt(0))) || parts[0];
+                const initials = namePart.charAt(0);
                 const colors = ['#3498DB', '#E74C3C', '#2ECC71', '#F1C40F', '#9B59B6', '#1ABC9C', '#E67E22', '#34495E'];
                 let hash = 0;
-                for (let i = 0; i < name.length; i++) {
-                    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+                for (let i = 0; i < fullName.length; i++) {
+                    hash = fullName.charCodeAt(i) + ((hash << 5) - hash);
                 }
                 const color = colors[Math.abs(hash % colors.length)];
-                return `<div style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background-color: ${color}; color: white; font-weight: bold; margin-right: 10px; font-size: 0.9em;">${initials}</div>`;
+                return `<div style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background-color: ${color}; color: white; font-weight: bold; margin-right: 10px; font-size: 1.1em;">${initials}</div>`;
             }
 
-            // ========== CODE ที่แก้ไข ==========
+            function getDisplayName(fullName) {
+                if (!fullName) return '';
+                const parts = fullName.trim().split(' ');
+                // กรองเอาเฉพาะส่วนที่ไม่ใช่รหัส (ส่วนที่เป็นภาษาไทยหรืออังกฤษ)
+                const nameParts = parts.filter(part => isNaN(part.charAt(0)));
+                return nameParts.join(' ');
+            }
+
             function renderTable(data) {
                 tableBody.innerHTML = '';
                 if (data.length === 0) {
@@ -333,17 +344,17 @@
                 data.forEach((row) => {
                     const tr = document.createElement('tr');
                     const techName = row['Ack. By'] || '';
+                    const displayName = getDisplayName(techName); // ดึงเฉพาะชื่อ
                     const remarkText = row['Remark'] || '';
                     const remarkClass = getRemarkClass(remarkText);
                     
-                    // แก้ไขบรรทัดนี้: เพิ่ม <div> ครอบแล้วใช้ d-flex
                     tr.innerHTML = `
                         <td>${row['Product Id']||''}</td>
                         <td>${row['Queue']||''}</td>
                         <td>${row['Create Date']||''}</td>
                         <td>${row['Action Type']||''}</td>
                         <td>${row['Solution']||''}</td>
-                        <td><div class="d-flex align-items-center">${createAvatar(techName)} ${techName}</div></td>
+                        <td><div class="d-flex align-items-center" style="white-space: nowrap;">${createAvatar(techName)} ${displayName}</div></td>
                         <td>${row['Appoint Date']||''}</td>
                         <td>${row['Prefer Date']||''}</td>
                         <td class="${remarkClass}">${remarkText}</td>
