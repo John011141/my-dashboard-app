@@ -40,6 +40,7 @@
             display: flex;
             flex-direction: column;
             border-right: 1px solid #e0e0e0;
+            flex-shrink: 0;
         }
         .sidebar .logo {
             font-weight: 700;
@@ -90,7 +91,6 @@
             font-size: 2rem;
             opacity: 0.2;
         }
-        /* กำหนดสีขอบให้แต่ละการ์ด */
         .kpi-card.border-primary { border-left-color: var(--bs-primary); }
         .kpi-card.border-danger { border-left-color: var(--bs-danger); }
         .kpi-card.border-success { border-left-color: var(--bs-success); }
@@ -118,7 +118,6 @@
             background-color: rgba(0, 0, 0, 0.05) !important;
         }
         
-        /* สีสำหรับคอลัมน์ Remark (ยังคงเดิม) */
         .bg-warning { background-color: #ffc107 !important; }
         .bg-warning-subtle { background-color: #fff3cd !important; }
         .bg-danger-subtle { background-color: #f8d7da !important; }
@@ -146,6 +145,51 @@
         .filterable-header:hover { background-color: #3e5165; }
         .filterable-header.active-filter, .filterable-header.active-sort { background-color: var(--bs-primary); }
         .sort-icon { margin-left: 8px; opacity: 0.6; }
+
+        /* ========== CODE ที่เพิ่มเข้ามา: Responsive Design ========== */
+        #menu-toggle {
+            display: none; /* ซ่อนปุ่มเมนูในหน้าจอใหญ่ */
+        }
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1030;
+        }
+
+        @media (max-width: 992px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100%;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease-in-out;
+                z-index: 1040;
+            }
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            #menu-toggle {
+                display: block; /* แสดงปุ่มเมนูในหน้าจอเล็ก */
+            }
+            .content {
+                padding: 1rem;
+            }
+            .table-container {
+                overflow-x: auto; /* ทำให้ตารางเลื่อนแนวนอนได้ */
+                -webkit-overflow-scrolling: touch; /* เพื่อความลื่นไหลบน iOS */
+            }
+            .table {
+                min-width: 900px; /* กำหนดความกว้างขั้นต่ำให้ตาราง */
+            }
+        }
+        /* ======================================================= */
     </style>
 </head>
 <body>
@@ -161,18 +205,21 @@
         <div class="content">
             <div class="content-header d-flex justify-content-between align-items-center">
                 <div>
-                    <h1 class="mb-0">Report 24 Fix by Prefer Date</h1>
-                    <p class="text-muted">ภาพรวมของงานทั้งหมด</p>
-                    <p class="text-muted">** อัพเดทข้อมูลทุกวัน เวลา 8:50 น. ** ให้กดรับงานก่อน 9 โมงเช้า</p>
-                    <p class="last-updated-info">อัปเดตล่าสุดเวลา 9:00 น.</p>
+                    <!-- เพิ่มเข้ามา: ปุ่มเมนูสำหรับมือถือ -->
+                    <button class="btn btn-light me-2" id="menu-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 class="mb-0 d-inline-block align-middle">Report 24 Fix</h1>
+                    <p class="text-muted d-block">ภาพรวมของงานทั้งหมด</p>
                 </div>
                 <div>
                     <button class="btn btn-primary" id="download-report-btn">
-                        <i class="fas fa-camera"></i> Download as Image
+                        <i class="fas fa-camera"></i> <span class="d-none d-md-inline">Download</span>
                     </button>
                 </div>
             </div>
-
+            
+            <!-- (ส่วนของการ์ดและตารางยังคงเหมือนเดิม) -->
             <div class="row mb-4 g-3">
                 <div class="col-lg-3 col-md-6">
                     <div class="kpi-card">
@@ -266,6 +313,9 @@
             </div>
         </div>
     </div>
+    
+    <!-- เพิ่มเข้ามา: Overlay สำหรับปิด Sidebar -->
+    <div class="sidebar-overlay"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -285,6 +335,22 @@
                 }
                 return;
             }
+
+            // ========== CODE ที่เพิ่มเข้ามา: จัดการ Sidebar บนมือถือ ==========
+            const menuToggle = document.getElementById('menu-toggle');
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+                overlay.style.display = 'block';
+            });
+
+            overlay.addEventListener('click', () => {
+                sidebar.classList.remove('active');
+                overlay.style.display = 'none';
+            });
+            // =========================================================
 
             const tableBody = document.getElementById('data-table-body');
             const filterPanel = document.getElementById('filter-panel');
@@ -318,12 +384,10 @@
                 return '';
             }
 
-            // ========== CODE ที่แก้ไข ==========
             function createAvatar(fullName) {
                 if (!fullName) return '';
                 const parts = fullName.trim().split(' ');
-                // หาคำแรกที่ไม่ใช่รหัส (เช่น ไม่มีตัวเลข หรือไม่ใช่ตัวอังกฤษพิมพ์ใหญ่ล้วน)
-                const namePart = parts.find(p => isNaN(p.charAt(0)) && !/^[A-Z0-9]+$/.test(p)) || parts.find(p => /[a-zA-Z]/.test(p)) || parts[0];
+                const namePart = parts.find(p => isNaN(p.charAt(0))) || parts[0];
                 const initials = namePart.charAt(0);
                 const colors = ['#3498DB', '#E74C3C', '#2ECC71', '#F1C40F', '#9B59B6', '#1ABC9C', '#E67E22', '#34495E'];
                 let hash = 0;
@@ -337,13 +401,7 @@
             function getDisplayName(fullName) {
                 if (!fullName) return '';
                 const parts = fullName.trim().split(' ');
-                // กรองเอาเฉพาะส่วนที่ไม่ใช่รหัสพนักงาน
-                const nameParts = parts.filter(part => {
-                    // เก็บส่วนที่เป็นภาษาไทย หรือ ภาษาอังกฤษ (ที่มีตัวพิมพ์เล็ก)
-                    return /[ก-๙]/.test(part) || /[a-z]/.test(part);
-                });
-                // ถ้ากรองแล้วไม่เหลืออะไรเลย (เช่น กรณีชื่ออังกฤษพิมพ์ใหญ่ล้วน) ให้ใช้ชื่อเดิมทั้งหมด
-                if (nameParts.length === 0) return fullName;
+                const nameParts = parts.filter(part => !/^[a-zA-Z0-9]+$/.test(part) || part.length < 5);
                 return nameParts.join(' ');
             }
 
@@ -364,7 +422,7 @@
                 data.forEach((row) => {
                     const tr = document.createElement('tr');
                     const techName = row['Ack. By'] || '';
-                    const displayName = getDisplayName(techName); // ดึงเฉพาะชื่อ
+                    const displayName = getDisplayName(techName);
                     const remarkText = row['Remark'] || '';
                     const remarkClass = getRemarkClass(remarkText);
                     
@@ -440,7 +498,56 @@
                 updateDashboardCards(resultData);
             }
 
-            function showFilterPanel(headerElement) { currentField = headerElement.dataset.field; const filterType = headerElement.dataset.filterType || 'single'; let uniqueValues = [...new Set(processedData.map(item => item[currentField]))].filter(item => item != null && item !== ''); if (currentField === 'Solution') { uniqueValues = uniqueValues.filter(item => { const itemLower = item.toLowerCase(); return !itemLower.includes('439 :') && !itemLower.includes('544 : proactive ensure fault ค่าสัญญาณดี') && !itemLower.includes('370 :') && !itemLower.includes('559 : ย้ายจุด/เดินสายภายในบ้าน ประเภทเดินสายลอยตีกิ๊บ จุดละ1000 บาท 20เมตร (รวม vat)') && !itemLower.includes('proactive'); }); } uniqueValues.sort(); filterPanelTitle.textContent = `Actions for ${currentField}`; filterPanelBody.innerHTML = ''; const sortButtonsHtml = ` <div class="filter-panel-sort"> <div class="btn-group w-100" role="group"> <button type="button" class="btn btn-sm btn-outline-secondary" id="sort-asc-btn"><i class="fas fa-arrow-up-a-z"></i> A-Z</button> <button type="button" class="btn btn-sm btn-outline-secondary" id="sort-desc-btn"><i class="fas fa-arrow-down-z-a"></i> Z-A</button> <button type="button" class="btn btn-sm btn-outline-danger" id="clear-sort-btn"><i class="fas fa-times"></i> Clear</button> </div> </div> `; const filterPanelHeader = filterPanel.querySelector('.filter-panel-header'); if (filterPanelHeader) { const existingSortPanel = filterPanel.querySelector('.filter-panel-sort'); if (existingSortPanel) { existingSortPanel.remove(); } filterPanelHeader.insertAdjacentHTML('afterend', sortButtonsHtml); } const newSortAscBtn = document.getElementById('sort-asc-btn'); const newSortDescBtn = document.getElementById('sort-desc-btn'); const newClearSortBtn = document.getElementById('clear-sort-btn'); if (newSortAscBtn) { newSortAscBtn.addEventListener('click', () => { sortState = { field: currentField, direction: 'asc' }; updateTableDisplay(); hideFilterPanel(); }); } if (newSortDescBtn) { newSortDescBtn.addEventListener('click', () => { sortState = { field: currentField, direction: 'desc' }; updateTableDisplay(); hideFilterPanel(); }); } if (newClearSortBtn) { newClearSortBtn.addEventListener('click', () => { sortState = { field: null, direction: 'none' }; updateTableDisplay(); hideFilterPanel(); }); } if (filterType === 'multi') { uniqueValues.forEach(val => { const isChecked = activeFilters[currentField]?.includes(val) ? 'checked' : ''; filterPanelBody.innerHTML += `<div class="form-check"><input class="form-check-input" type="checkbox" value="${val}" id="check-${val}" ${isChecked}><label class="form-check-label" for="check-${val}">${val}</label></div>`; }); } else { const selectEl = document.createElement('select'); selectEl.className = 'form-select'; const defaultOption = document.createElement('option'); defaultOption.value = ''; defaultOption.textContent = '-- All --'; selectEl.appendChild(defaultOption); const currentFilterValue = activeFilters[currentField] || ''; uniqueValues.forEach(val => { const option = document.createElement('option'); option.value = val; option.textContent = val; if (val === currentFilterValue) option.selected = true; selectEl.appendChild(option); }); filterPanelBody.appendChild(selectEl); } const headerRect = headerElement.getBoundingClientRect(); filterPanel.style.left = `${headerRect.left}px`; filterPanel.style.top = `${headerRect.bottom + 5}px`; filterPanel.style.display = 'block'; }
+            function showFilterPanel(headerElement) {
+                currentField = headerElement.dataset.field;
+                const filterType = headerElement.dataset.filterType || 'single';
+                let uniqueValues = [...new Set(processedData.map(item => item[currentField]))].filter(item => item != null && item !== '');
+                
+                if (currentField === 'Solution') {
+                    uniqueValues = uniqueValues.filter(item => {
+                        const itemLower = item.toLowerCase();
+                        return !itemLower.includes('439 :') && 
+                               !itemLower.includes('544 : proactive ensure fault ค่าสัญญาณดี') && 
+                               !itemLower.includes('370 :') && 
+                               !itemLower.includes('559 : ย้ายจุด/เดินสายภายในบ้าน ประเภทเดินสายลอยตีกิ๊บ จุดละ1000 บาท 20เมตร (รวม vat)') &&
+                               !itemLower.includes('proactive');
+                    });
+                }
+                
+                uniqueValues.sort();
+
+                filterPanelTitle.textContent = `Actions for ${currentField}`;
+                filterPanelBody.innerHTML = '';
+
+                const sortButtonsHtml = ` <div class="filter-panel-sort"> <div class="btn-group w-100" role="group"> <button type="button" class="btn btn-sm btn-outline-secondary" id="sort-asc-btn"><i class="fas fa-arrow-up-a-z"></i> A-Z</button> <button type="button" class="btn btn-sm btn-outline-secondary" id="sort-desc-btn"><i class="fas fa-arrow-down-z-a"></i> Z-A</button> <button type="button" class="btn btn-sm btn-outline-danger" id="clear-sort-btn"><i class="fas fa-times"></i> Clear</button> </div> </div> `;
+                const filterPanelHeader = filterPanel.querySelector('.filter-panel-header');
+                if (filterPanelHeader) {
+                    const existingSortPanel = filterPanel.querySelector('.filter-panel-sort');
+                    if (existingSortPanel) { existingSortPanel.remove(); }
+                    filterPanelHeader.insertAdjacentHTML('afterend', sortButtonsHtml);
+                }
+                
+                const newSortAscBtn = document.getElementById('sort-asc-btn');
+                const newSortDescBtn = document.getElementById('sort-desc-btn');
+                const newClearSortBtn = document.getElementById('clear-sort-btn');
+
+                if (newSortAscBtn) { newSortAscBtn.addEventListener('click', () => { sortState = { field: currentField, direction: 'asc' }; updateTableDisplay(); hideFilterPanel(); }); }
+                if (newSortDescBtn) { newSortDescBtn.addEventListener('click', () => { sortState = { field: currentField, direction: 'desc' }; updateTableDisplay(); hideFilterPanel(); }); }
+                if (newClearSortBtn) { newClearSortBtn.addEventListener('click', () => { sortState = { field: null, direction: 'none' }; updateTableDisplay(); hideFilterPanel(); }); }
+
+                if (filterType === 'multi') {
+                    uniqueValues.forEach(val => {
+                        const isChecked = activeFilters[currentField]?.includes(val) ? 'checked' : '';
+                        filterPanelBody.innerHTML += `<div class="form-check"><input class="form-check-input" type="checkbox" value="${val}" id="check-${val}" ${isChecked}><label class="form-check-label" for="check-${val}">${val}</label></div>`;
+                    });
+                }
+                
+                const headerRect = headerElement.getBoundingClientRect();
+                filterPanel.style.left = `${headerRect.left}px`;
+                filterPanel.style.top = `${headerRect.bottom + 5}px`;
+                filterPanel.style.display = 'block';
+            }
+
             function hideFilterPanel() { if (filterPanel) { filterPanel.style.display = 'none'; } currentField = null; }
             function updateHeaderStyles() { document.querySelectorAll('.filterable-header').forEach(h => { const field = h.dataset.field; h.classList.toggle('active-filter', !!(activeFilters[field] && (!Array.isArray(activeFilters[field]) || activeFilters[field].length > 0))); h.classList.toggle('active-sort', sortState.field === field && sortState.direction !== 'none'); const icon = h.querySelector('.sort-icon'); if (icon) { if (sortState.field === field && sortState.direction === 'asc') { icon.className = 'sort-icon fas fa-arrow-up'; } else if (sortState.field === field && sortState.direction === 'desc') { icon.className = 'sort-icon fas fa-arrow-down'; } else { icon.className = 'sort-icon fas fa-sort'; } } }); }
             document.querySelectorAll('.filterable-header').forEach(header => { header.addEventListener('click', (e) => { e.stopPropagation(); if (currentField === e.currentTarget.dataset.field) { hideFilterPanel(); } else { showFilterPanel(e.currentTarget); } }); });
