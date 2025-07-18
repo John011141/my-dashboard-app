@@ -398,10 +398,17 @@
                 return `<div style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background-color: ${color}; color: white; font-weight: bold; margin-right: 10px; font-size: 1.1em; flex-shrink: 0;">${initials}</div>`;
             }
 
+           
             function getDisplayName(fullName) {
                 if (!fullName) return '';
                 const parts = fullName.trim().split(' ');
-                const nameParts = parts.filter(part => !/^[a-zA-Z0-9]+$/.test(part) || part.length < 5);
+                // กรองเอาเฉพาะส่วนที่ไม่ใช่รหัสพนักงาน
+                const nameParts = parts.filter(part => {
+                    // เงื่อนไข: เป็นตัวอักษรไทย หรือ เป็นตัวอักษรภาษาอังกฤษ
+                    return /[ก-๙]/.test(part) || /[a-zA-Z]/.test(part);
+                });
+                // ถ้ากรองแล้วไม่เหลืออะไรเลย (เช่น มีแต่รหัส) ให้ใช้ชื่อเดิม
+                if (nameParts.length === 0) return fullName;
                 return nameParts.join(' ');
             }
 
