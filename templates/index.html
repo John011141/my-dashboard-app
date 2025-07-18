@@ -318,10 +318,12 @@
                 return '';
             }
 
+            // ========== CODE ที่แก้ไข ==========
             function createAvatar(fullName) {
                 if (!fullName) return '';
                 const parts = fullName.trim().split(' ');
-                const namePart = parts.find(p => isNaN(p.charAt(0))) || parts[0];
+                // หาคำแรกที่ไม่ใช่รหัส (เช่น ไม่มีตัวเลข หรือไม่ใช่ตัวอังกฤษพิมพ์ใหญ่ล้วน)
+                const namePart = parts.find(p => isNaN(p.charAt(0)) && !/^[A-Z0-9]+$/.test(p)) || parts.find(p => /[a-zA-Z]/.test(p)) || parts[0];
                 const initials = namePart.charAt(0);
                 const colors = ['#3498DB', '#E74C3C', '#2ECC71', '#F1C40F', '#9B59B6', '#1ABC9C', '#E67E22', '#34495E'];
                 let hash = 0;
@@ -332,15 +334,16 @@
                 return `<div style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background-color: ${color}; color: white; font-weight: bold; margin-right: 10px; font-size: 1.1em; flex-shrink: 0;">${initials}</div>`;
             }
 
-            // ========== CODE ที่แก้ไข ==========
             function getDisplayName(fullName) {
                 if (!fullName) return '';
                 const parts = fullName.trim().split(' ');
                 // กรองเอาเฉพาะส่วนที่ไม่ใช่รหัสพนักงาน
-                // เงื่อนไข: เป็นตัวอักษรไทย หรือ เป็นตัวอักษรภาษาอังกฤษ (ทั้งพิมพ์เล็กและใหญ่)
                 const nameParts = parts.filter(part => {
-                    return /[ก-๙]/.test(part) || /[a-zA-Z]/.test(part);
+                    // เก็บส่วนที่เป็นภาษาไทย หรือ ภาษาอังกฤษ (ที่มีตัวพิมพ์เล็ก)
+                    return /[ก-๙]/.test(part) || /[a-z]/.test(part);
                 });
+                // ถ้ากรองแล้วไม่เหลืออะไรเลย (เช่น กรณีชื่ออังกฤษพิมพ์ใหญ่ล้วน) ให้ใช้ชื่อเดิมทั้งหมด
+                if (nameParts.length === 0) return fullName;
                 return nameParts.join(' ');
             }
 
