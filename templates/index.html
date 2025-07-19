@@ -219,7 +219,6 @@
                 </div>
             </div>
             
-            <!-- (ส่วนของการ์ดและตารางยังคงเหมือนเดิม) -->
             <div class="row mb-4 g-3">
                 <div class="col-lg-3 col-md-6">
                     <div class="kpi-card">
@@ -272,7 +271,7 @@
                     <thead class="table-dark">
                         <tr>
                             <th scope="col" style="width: 12%;">Product Id</th>
-                            <th scope="col" style="width: 5%;" class="filterable-header" data-field="Queue">Queue<span class="sort-icon"></span></th>
+                            <th scope="col" style="width: 5%;" class="filterable-header" data-field="Queue" data-filter-type="multi">Queue<span class="sort-icon"></span></th>
                             <th scope="col" style="width: 10%;">Create Date</th>
                             <th scope="col" style="width: 10%;" class="filterable-header" data-field="Action Type" data-filter-type="multi">Action Type<span class="sort-icon"></span></th>
                             <th scope="col" style="width: 15%;" class="filterable-header" data-field="Solution" data-filter-type="multi">Solution<span class="sort-icon"></span></th>
@@ -314,7 +313,6 @@
         </div>
     </div>
     
-    <!-- เพิ่มเข้ามา: Overlay สำหรับปิด Sidebar -->
     <div class="sidebar-overlay"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -322,6 +320,8 @@
     <script src="https://cdn.jsdelivr.net/npm/countup.js@2.0.7/dist/countUp.min.js"></script>
     
     <script>
+        // This part would typically be populated by a backend template engine like Flask/Jinja2
+        // For demonstration, we'll use a placeholder. Replace this with your actual data injection.
         const fullData = JSON.parse('{{ data | tojson | safe }}');
     </script>
     
@@ -336,7 +336,6 @@
                 return;
             }
 
-            // ========== CODE ที่เพิ่มเข้ามา: จัดการ Sidebar บนมือถือ ==========
             const menuToggle = document.getElementById('menu-toggle');
             const sidebar = document.querySelector('.sidebar');
             const overlay = document.querySelector('.sidebar-overlay');
@@ -350,7 +349,6 @@
                 sidebar.classList.remove('active');
                 overlay.style.display = 'none';
             });
-            // =========================================================
 
             const tableBody = document.getElementById('data-table-body');
             const filterPanel = document.getElementById('filter-panel');
@@ -365,7 +363,70 @@
             let currentField = null; 
 
             function parseDate(dateString) { if (!dateString || typeof dateString !== 'string') return null; dateString = dateString.trim(); const dateTimeParts = dateString.split(' '); let datePartStr = dateTimeParts[0]; let timePartStr = dateTimeParts.length > 1 ? dateTimeParts[1] : '00:00:00'; let year, month, day, hours, minutes, seconds; const dateParts = datePartStr.split('/'); if (dateParts.length === 3) { year = parseInt(dateParts[2], 10); month = parseInt(dateParts[1], 10) - 1; day = parseInt(dateParts[0], 10); } else { if (datePartStr.includes(':')) { timePartStr = datePartStr; const today = new Date(); year = today.getFullYear(); month = today.getMonth(); day = today.getDate(); } else { return null; } } const timeParts = timePartStr.split(':'); hours = parseInt(timeParts[0] || '0', 10); minutes = parseInt(timeParts[1] || '0', 10); seconds = parseInt(timeParts[2] || '0', 10); const date = new Date(year, month, day, hours, minutes, seconds); return isNaN(date.getTime()) ? null : date; }
-            fullData.forEach(row => { const originalRemark = row['Remark']; const appointDateStr = row['Appoint Date']; const preferDateStr = row['Prefer Date']; const appointDate = parseDate(appointDateStr); const preferDate = parseDate(preferDateStr); let calculatedRemark = ''; let remarkSetByLogic = false; const preferDateOnly = preferDate ? new Date(preferDate.getFullYear(), preferDate.getMonth(), preferDate.getDate()) : null; const appointDateOnly = appointDate ? new Date(appointDate.getFullYear(), appointDate.getMonth(), appointDate.getDate()) : null; if (preferDateOnly instanceof Date && !isNaN(preferDateOnly.getTime()) && appointDateOnly instanceof Date && !isNaN(appointDateOnly.getTime())) { if (preferDateOnly.getTime() < appointDateOnly.getTime()) { calculatedRemark = 'เลื่อนนัดเปลี่ยน PF'; remarkSetByLogic = true; } } if (!remarkSetByLogic) { if (!appointDateStr || appointDate === null || isNaN(appointDate.getTime())) { calculatedRemark = 'ปิดงานใน 24 ชม. จาก Create'; remarkSetByLogic = true; } else if (!preferDateStr || preferDate === null || isNaN(preferDate.getTime())) { if (appointDate instanceof Date && !isNaN(appointDate.getTime())) { const futureAppointDate = new Date(appointDate.getTime() + (4 * 60 * 60 * 1000)); const formattedFutureAppointDate = `${futureAppointDate.getDate().toString().padStart(2, '0')}/${(futureAppointDate.getMonth() + 1).toString().padStart(2, '0')}/${futureAppointDate.getFullYear()} ${futureAppointDate.getHours().toString().padStart(2, '0')}:${futureAppointDate.getMinutes().toString().padStart(2, '0')}`; calculatedRemark = `ปิดงานก่อน ${formattedFutureAppointDate}`; remarkSetByLogic = true; } else { calculatedRemark = 'วันที่ไม่ถูกต้อง/ไม่ครบถ้วน'; remarkSetByLogic = true; } } else if (preferDate instanceof Date && !isNaN(preferDate.getTime()) && appointDate instanceof Date && !isNaN(appointDate.getTime())) { if (preferDate.getTime() === appointDate.getTime()) { calculatedRemark = 'ปิดงานได้ตามปกติ'; remarkSetByLogic = true; } else { calculatedRemark = 'เลื่อนนัดเปลี่ยน PF หรือปิดงานหลัง PF ไม่เกิน 4 ชม.'; remarkSetByLogic = true; } } else if (appointDateStr || preferDateStr) { calculatedRemark = 'วันที่ไม่ถูกต้อง/ไม่ครบถ้วน'; remarkSetByLogic = true; } } if (remarkSetByLogic) { row['Remark'] = calculatedRemark; } else { if (originalRemark && (originalRemark.includes('ปิดงานใน 24 ชม. จาก Create') || originalRemark.includes('ปิดงานก่อน ') || originalRemark.includes('วันที่ไม่ถูกต้อง/ไม่ครบถ้วน'))) { row['Remark'] = originalRemark; } else { row['Remark'] = ''; } } });
+            
+            // ===================================================================
+            // START: LOGIC FOR 'REMARK' COLUMN MODIFIED HERE
+            // ===================================================================
+            fullData.forEach(row => { 
+                const originalRemark = row['Remark']; 
+                const appointDateStr = row['Appoint Date']; 
+                const preferDateStr = row['Prefer Date']; 
+                const appointDate = parseDate(appointDateStr); 
+                const preferDate = parseDate(preferDateStr); 
+                let calculatedRemark = ''; 
+                let remarkSetByLogic = false; 
+                const preferDateOnly = preferDate ? new Date(preferDate.getFullYear(), preferDate.getMonth(), preferDate.getDate()) : null; 
+                const appointDateOnly = appointDate ? new Date(appointDate.getFullYear(), appointDate.getMonth(), appointDate.getDate()) : null; 
+                
+                if (preferDateOnly instanceof Date && !isNaN(preferDateOnly.getTime()) && appointDateOnly instanceof Date && !isNaN(appointDateOnly.getTime())) { 
+                    if (preferDateOnly.getTime() < appointDateOnly.getTime()) { 
+                        calculatedRemark = 'เลื่อนนัดเปลี่ยน PF'; 
+                        remarkSetByLogic = true; 
+                    } 
+                } 
+                
+                if (!remarkSetByLogic) { 
+                    if (!appointDateStr || appointDate === null || isNaN(appointDate.getTime())) { 
+                        calculatedRemark = 'ปิดงานใน 24 ชม. จาก Create'; 
+                        remarkSetByLogic = true; 
+                    } else if (!preferDateStr || preferDate === null || isNaN(preferDate.getTime())) { 
+                        if (appointDate instanceof Date && !isNaN(appointDate.getTime())) { 
+                            const futureAppointDate = new Date(appointDate.getTime() + (4 * 60 * 60 * 1000)); 
+                            // --- MODIFIED: Format to show only time ---
+                            const formattedFutureAppointDate = `${futureAppointDate.getHours().toString().padStart(2, '0')}:${futureAppointDate.getMinutes().toString().padStart(2, '0')}`; 
+                            calculatedRemark = `ปิดงานก่อน ${formattedFutureAppointDate}`; 
+                            remarkSetByLogic = true; 
+                        } else { 
+                            calculatedRemark = 'วันที่ไม่ถูกต้อง/ไม่ครบถ้วน'; 
+                            remarkSetByLogic = true; 
+                        } 
+                    } else if (preferDate instanceof Date && !isNaN(preferDate.getTime()) && appointDate instanceof Date && !isNaN(appointDate.getTime())) { 
+                        if (preferDate.getTime() === appointDate.getTime()) { 
+                            calculatedRemark = 'ปิดงานได้ตามปกติ'; 
+                            remarkSetByLogic = true; 
+                        } else { 
+                            const futurePreferDate = new Date(preferDate.getTime() + (4 * 60 * 60 * 1000)); 
+                            // --- MODIFIED: Format to show only time ---
+                            const formattedFuturePreferDate = `${futurePreferDate.getHours().toString().padStart(2, '0')}:${futurePreferDate.getMinutes().toString().padStart(2, '0')}`; 
+                            calculatedRemark = `เลื่อนนัดเปลี่ยน PF หรือปิดงานก่อน ${formattedFuturePreferDate}`; 
+                            remarkSetByLogic = true; 
+                        } 
+                    } else if (appointDateStr || preferDateStr) { 
+                        calculatedRemark = 'วันที่ไม่ถูกต้อง/ไม่ครบถ้วน'; 
+                        remarkSetByLogic = true; 
+                    } 
+                } 
+                
+                if (remarkSetByLogic) { 
+                    row['Remark'] = calculatedRemark; 
+                } else { 
+                    if (originalRemark && (originalRemark.includes('ปิดงานใน 24 ชม. จาก Create') || originalRemark.includes('ปิดงานก่อน ') || originalRemark.includes('วันที่ไม่ถูกต้อง/ไม่ครบถ้วน'))) { 
+                        row['Remark'] = originalRemark; 
+                    } else { 
+                        row['Remark'] = ''; 
+                    } 
+                } 
+            });
             
             const processedData = fullData.filter(row => {
                 if (!row['Ack. By']) { return false; }
@@ -376,14 +437,14 @@
             function getRemarkClass(remarkText) {
                 if (!remarkText) return '';
                 if (remarkText === 'เลื่อนนัดเปลี่ยน PF') { return 'bg-danger-subtle text-danger-emphasis'; }
-                if (remarkText.includes('เลื่อนนัดเปลี่ยน PF หรือปิดงานหลัง PF ไม่เกิน 4 ชม.')) { return 'bg-warning text-dark'; }
+                if (remarkText.includes('เลื่อนนัดเปลี่ยน PF หรือปิดงานก่อน')) { return 'bg-warning text-dark'; }
                 if (remarkText.includes('ปิดงานได้ตามปกติ')) { return 'bg-success-subtle text-success-emphasis'; }
                 if (remarkText.includes('ปิดงานใน 24 ชม. จาก Create')) { return 'bg-info-subtle text-info-emphasis'; }
                 if (remarkText.includes('ปิดงานก่อน')) { return 'bg-warning-subtle text-warning-emphasis'; }
                 if (remarkText.includes('วันที่ไม่ถูกต้อง/ไม่ครบถ้วน')) { return 'bg-secondary-subtle text-secondary-emphasis'; }
                 return '';
             }
-
+            
             function createAvatar(fullName) {
                 if (!fullName) return '';
                 const parts = fullName.trim().split(' ');
@@ -397,19 +458,12 @@
                 const color = colors[Math.abs(hash % colors.length)];
                 return `<div style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background-color: ${color}; color: white; font-weight: bold; margin-right: 10px; font-size: 1.1em; flex-shrink: 0;">${initials}</div>`;
             }
-
            
             function getDisplayName(fullName) {
                 if (!fullName) return '';
-                const parts = fullName.trim().split(' ');
-                // กรองเอาเฉพาะส่วนที่ไม่ใช่รหัสพนักงาน
-                const nameParts = parts.filter(part => {
-                    // เงื่อนไข: เป็นตัวอักษรไทย หรือ เป็นตัวอักษรภาษาอังกฤษ
-                    return /[ก-๙]/.test(part) || /[a-zA-Z]/.test(part)|| /[0-9]/.test(part);
-                });
-                // ถ้ากรองแล้วไม่เหลืออะไรเลย (เช่น มีแต่รหัส) ให้ใช้ชื่อเดิม
-                if (nameParts.length === 0) return fullName;
-                return nameParts.join(' ');
+                // This regex finds a sequence of letters/numbers at the start of the string
+                // (assumed to be the employee ID) followed by a space, and removes it.
+                return fullName.trim().replace(/^[a-zA-Z0-9]+\s+/, '');
             }
 
             function renderTable(data) {
