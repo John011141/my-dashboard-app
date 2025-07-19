@@ -405,7 +405,7 @@
                 // กรองเอาเฉพาะส่วนที่ไม่ใช่รหัสพนักงาน
                 const nameParts = parts.filter(part => {
                     // เงื่อนไข: เป็นตัวอักษรไทย หรือ เป็นตัวอักษรภาษาอังกฤษ
-                    return /[ก-๙]/.test(part) || /[a-zA-Z]/.test(part);
+                    return /[ก-๙]/.test(part) || /[a-zA-Z]/.test(part)|| /[0-9]/.test(part);
                 });
                 // ถ้ากรองแล้วไม่เหลืออะไรเลย (เช่น มีแต่รหัส) ให้ใช้ชื่อเดิม
                 if (nameParts.length === 0) return fullName;
