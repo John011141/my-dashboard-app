@@ -430,11 +430,26 @@
                 } 
             });
             
-            const processedData = fullData.filter(row => {
-                if (!row['Ack. By']) { return false; }
-                if (row['Solution']) { const solutionText = row['Solution'].toLowerCase(); if (solutionText.includes('559 : ย้ายจุด/เดินสายภายในบ้าน ประเภทเดินสายลอยตีกิ๊บ จุดละ1000 บาท 20เมตร (รวม vat)')) { return false; } if (solutionText.includes('544 : proactive ensure fault ค่าสัญญาณดี')) { return false; } if (solutionText.includes('proactive')) { return false; } }
-                return true;
-            });
+           const processedData = fullData.filter(row => {
+        // --- บรรทัดที่เพิ่มเข้ามา ---
+        // ถ้า Action Type คือ 'Scheduled' ให้เก็บข้อมูลไว้เลย ไม่ต้องเช็คเงื่อนไขอื่น
+        if (row['Action Type'] === 'Scheduled') {
+            return true;
+        }
+
+        // --- เงื่อนไขเดิม ---
+        if (!row['Ack. By']) { return false; }
+        if (row['Solution']) {
+            const solutionText = row['Solution'].toLowerCase();
+            if (solutionText.includes('559 : ย้ายจุด/เดินสายภายในบ้าน ประเภทเดินสายลอยตีกิ๊บ จุดละ1000 บาท 20เมตร (รวม vat)')) { return false; }
+            if (solutionText.includes('544 : proactive ensure fault ค่าสัญญาณดี')) { return false; }
+            
+            if (solutionText.includes('proactive') && row['Action Type'] !== 'Scheduled') { 
+                return false; 
+            }
+        }
+        return true;
+    });
 
             function getRemarkClass(remarkText) {
                 if (!remarkText) return '';
