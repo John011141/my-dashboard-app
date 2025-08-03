@@ -212,11 +212,28 @@ const processedData = fullData.filter(row => {
 
         let tempTableBody = document.createDocumentFragment();
         
+        // --- ส่วนที่แก้ไขเพื่อจัดเรียงชื่อช่างที่ต้องการไว้บนสุด ---
+        const pinnedTech = "ชัยเลิศ สินจ้าง"; // <-- กำหนดชื่อช่างที่ต้องการปักหมุด
+        
         data.sort((a, b) => {
             const techA = a['Ack. By'] || '';
             const techB = b['Ack. By'] || '';
-            return techA.localeCompare(techB, undefined, { numeric: true, sensitivity: 'base' });
+
+            // ตรวจสอบเงื่อนไขการปักหมุด
+            const isAPinned = techA === pinnedTech;
+            const isBPinned = techB === pinnedTech;
+
+            if (isAPinned && !isBPinned) {
+                return -1; // A (ชัยเลิศ) มาก่อน B
+            }
+            if (!isAPinned && isBPinned) {
+                return 1; // B (ชัยเลิศ) มาก่อน A
+            }
+            
+            // ถ้าไม่ใช่ชื่อที่ปักหมุด หรือเป็นชื่อที่ปักหมุดทั้งคู่ ให้เรียงตามตัวอักษรปกติ
+            return techA.localeCompare(techB, 'th', { numeric: true, sensitivity: 'base' });
         });
+        // --- จบส่วนที่แก้ไข ---
 
         data.forEach((row) => {
             const tr = document.createElement('tr');
@@ -286,19 +303,36 @@ const processedData = fullData.filter(row => {
             });
         });
 
+        // --- ส่วนที่แก้ไข: ย้ายการเรียงข้อมูลไปไว้ใน renderTable ---
+        // เราจะไม่เรียงข้อมูลที่นี่แล้ว เพื่อให้การเรียงแบบปักหมุดทำงานได้ถูกต้องเสมอ
+        // การเรียงตามหัวตารางจะถูกจัดการแยกต่างหาก
+        // if (sortState.field && sortState.direction !== 'none') { ... } // ส่วนนี้ถูกย้ายไป
+
+        //--- ส่วนที่แก้ไข 2: จัดการการเรียงข้อมูลตามที่ผู้ใช้คลิกหัวตาราง ---
         if (sortState.field && sortState.direction !== 'none') {
-            resultData.sort((a, b) => {
+            // ถ้ามีการเรียงข้อมูลตามหัวตาราง ให้ทำการเรียงข้อมูลที่นี่ก่อน
+            // แต่ยังคงรักษาการปักหมุดไว้
+             const pinnedTech = "ชัยเลิศ สินจ้าง";
+             resultData.sort((a, b) => {
+                // ตรรกะการปักหมุด
+                const isAPinned = (a['Ack. By'] || '') === pinnedTech;
+                const isBPinned = (b['Ack. By'] || '') === pinnedTech;
+                if (isAPinned && !isBPinned) return -1;
+                if (!isAPinned && isBPinned) return 1;
+
+                // ตรรกะการเรียงตามที่ผู้ใช้เลือก
                 const dataField = sortState.field;
                 const valA = a[dataField] || '';
                 const valB = b[dataField] || '';
                 if (sortState.direction === 'asc') {
-                    return valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
+                    return valA.localeCompare(valB, 'th', { numeric: true, sensitivity: 'base' });
                 } else {
-                    return valB.localeCompare(valA, undefined, { numeric: true, sensitivity: 'base' });
+                    return valB.localeCompare(valA, 'th', { numeric: true, sensitivity: 'base' });
                 }
             });
         }
-        
+        // --- จบส่วนที่แก้ไข 2 ---
+
         renderTable(resultData);
         updateHeaderStyles();
         updateDashboardCards(resultData);
@@ -382,15 +416,32 @@ const processedData = fullData.filter(row => {
         document.querySelectorAll('.filterable-header').forEach(h => {
             const field = h.dataset.field;
             h.classList.toggle('active-filter', !!(activeFilters[field] && (!Array.isArray(activeFilters[field]) || activeFilters[field].length > 0)));
+            
+            // --- ส่วนที่แก้ไข: ปรับการแสดงผล icon ---
+            const pinnedTechName = "ชัยเลิศ สินจ้าง";
+            // ถ้ากำลังเรียงตาม 'Ack. By' ให้ถือว่าเป็นการเรียงแบบพิเศษ (ไม่แสดง icon sort)
+            // ยกเว้นว่าผู้ใช้จะคลิกเรียงเอง
+            const isDefaultAckSort = !sortState.field && field === 'Ack. By';
+
             h.classList.toggle('active-sort', sortState.field === field && sortState.direction !== 'none');
+            
             const icon = h.querySelector('.sort-icon');
             if (icon) {
-                if (sortState.field === field && sortState.direction === 'asc') { icon.className = 'sort-icon fas fa-arrow-up'; }
-                else if (sortState.field === field && sortState.direction === 'desc') { icon.className = 'sort-icon fas fa-arrow-down'; }
-                else { icon.className = 'sort-icon fas fa-sort'; }
+                if (sortState.field === field && sortState.direction === 'asc') { 
+                    icon.className = 'sort-icon fas fa-arrow-up'; 
+                } else if (sortState.field === field && sortState.direction === 'desc') { 
+                    icon.className = 'sort-icon fas fa-arrow-down'; 
+                } else if (isDefaultAckSort) {
+                    // สำหรับการเรียงแบบปักหมุดเริ่มต้น อาจจะไม่ต้องแสดง icon เลย หรือแสดง icon พิเศษ
+                    icon.className = 'sort-icon fas fa-thumbtack text-primary'; // แสดงรูปหมุด
+                }
+                else { 
+                    icon.className = 'sort-icon fas fa-sort'; 
+                }
             }
         });
     }
+
 
     document.querySelectorAll('.filterable-header').forEach(header => {
         header.addEventListener('click', (e) => {
