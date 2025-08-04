@@ -139,7 +139,7 @@
 
         .filter-panel-header { padding: 0.75rem 1rem; background-color: #f7f7f7; border-bottom: 1px solid #ddd; font-weight: 700; }
         .filter-panel-sort { padding: 0.75rem; border-bottom: 1px solid #eee; }
-        .filter-panel-body { padding: 1rem; max-height: 220px; overflow-y: auto; }
+        .filter-panel-body { padding: 1rem; max-height: 250px; /* ปรับความสูงเล็กน้อย */ overflow-y: hidden; }
         .filter-panel-footer { padding: 0.75rem; border-top: 1px solid #ddd; background-color: #f7f7f7; }
         .filterable-header { cursor: pointer; position: relative; }
         .filterable-header:hover { background-color: #3e5165; }
@@ -272,15 +272,15 @@
                     <thead class="table-dark">
                         <tr>
                             <th scope="col" style="width: 12%;">Product Id</th>
-                            <th scope="col" style="width: 5%;" class="filterable-header" data-field="Queue" data-filter-type="multi">Queue<span class="sort-icon"></span></th>
+                            <th scope="col" style="width: 5%;" class="filterable-header" data-field="Queue" data-filter-type="multi">Queue</span></th>
                             <th scope="col" style="width: 10%;">Create Date</th>
-                            <th scope="col" style="width: 10%;" class="filterable-header" data-field="Action Type" data-filter-type="multi">Action Type<span class="sort-icon"></span></th>
-                            <th scope="col" style="width: 15%;" class="filterable-header" data-field="Solution" data-filter-type="multi">Solution<span class="sort-icon"></span></th>
-                            <th scope="col" style="width: 15%;" class="filterable-header" data-field="Ack. By" data-filter-type="multi">Ack. By<span class="sort-icon"></span></th>
-                            <th scope="col" style="width: 13%;" class="filterable-header" data-field="Appoint Date" data-filter-type="multi">Appoint Date<span class="sort-icon"></span></th>
+                            <th scope="col" style="width: 10%;" class="filterable-header" data-field="Action Type" data-filter-type="multi">Action Type</span></th>
+                            <th scope="col" style="width: 15%;" class="filterable-header" data-field="Solution" data-filter-type="multi">Solution</span></th>
+                            <th scope="col" style="width: 15%;" class="filterable-header" data-field="Ack. By" data-filter-type="multi">Ack. By</span></th>
+                            <th scope="col" style="width: 13%;" class="filterable-header" data-field="Appoint Date" data-filter-type="multi">Appoint Date</span></th>
                         
                             <th scope="col" style="width: 10%;">Prefer Date</th>
-                            <th scope="col" style="width: 13%;" class="filterable-header" data-field="Remark" data-filter-type="multi">Remark<span class="sort-icon"></span></th>
+                            <th scope="col" style="width: 13%;" class="filterable-header" data-field="Remark" data-filter-type="multi">Remark</span></th>
                         </tr>
                     </thead>
                     <tbody id="data-table-body">
@@ -442,8 +442,6 @@
                 }
                 const tempTableBody = document.createDocumentFragment();
                 
-                // การเรียงข้อมูล (sort) จะถูกจัดการใน updateTableDisplay() แล้ว จึงไม่จำเป็นต้องเรียงซ้ำที่นี่
-                
                 data.forEach((row) => {
                     const tr = document.createElement('tr');
                     const techName = row['Ack. By'] || '';
@@ -488,37 +486,31 @@
                     document.getElementById('accepted-jobs-value').textContent = acceptedJobs;
                 }
             }
-            
-            // ===================================================================
-            // START: โค้ดส่วนที่แก้ไขหลัก
-            // ===================================================================
+
             function updateTableDisplay() { 
                 let resultData = processedData.filter(row => { 
                     return Object.keys(activeFilters).every(stateField => { 
                         const filterValue = activeFilters[stateField]; 
                         if (!filterValue || (Array.isArray(filterValue) && filterValue.length === 0)) return true; 
-                        const rowValue = row[stateField]; 
+
+                        const rowValue = row[stateField] || '';
+
                         if (Array.isArray(filterValue)) { return filterValue.includes(rowValue); } 
                         else { return rowValue === filterValue; } 
                     }); 
                 }); 
                 
-                // --- เพิ่มตรรกะการเรียงข้อมูลที่นี่ ---
-                const pinnedTechName = "ชัยเลิศ สินจ้าง"; // กำหนดชื่อที่ต้องการปักหมุด
+                const pinnedTechName = "ชัยเลิศ สินจ้าง";
 
                 resultData.sort((a, b) => {
                     const techA = a['Ack. By'] || '';
                     const techB = b['Ack. By'] || '';
-                    
-                    // ใช้ .includes() เพื่อให้ทำงานได้แม้จะมีรหัสพนักงานนำหน้าชื่อ
                     const isAPinned = techA.includes(pinnedTechName);
                     const isBPinned = techB.includes(pinnedTechName);
 
-                    // 1. ตรรกะการปักหมุด (มีสิทธิ์สูงสุด)
-                    if (isAPinned && !isBPinned) return -1; // A (ชัยเลิศ) มาก่อน B
-                    if (!isAPinned && isBPinned) return 1;  // B (ชัยเลิศ) มาก่อน A
+                    if (isAPinned && !isBPinned) return -1;
+                    if (!isAPinned && isBPinned) return 1;
 
-                    // 2. ถ้าไม่ใช่ชื่อที่ปักหมุด (หรือเป็นชื่อเดียวกัน) ให้ใช้การเรียงตามที่ผู้ใช้เลือก
                     if (sortState.field && sortState.direction !== 'none') { 
                         const dataField = sortState.field; 
                         const valA = a[dataField] || ''; 
@@ -530,7 +522,6 @@
                         } 
                     }
                     
-                    // 3. ถ้าไม่มีการเรียงใดๆ เลย (โหลดหน้าครั้งแรก) ให้เรียงตามชื่อช่างตามปกติ
                     const displayNameA = getDisplayName(techA);
                     const displayNameB = getDisplayName(techB);
                     return displayNameA.localeCompare(displayNameB, 'th');
@@ -540,14 +531,13 @@
                 updateHeaderStyles();
                 updateDashboardCards(resultData);
             }
-            // ===================================================================
-            // END: จบโค้ดส่วนที่แก้ไขหลัก
-            // ===================================================================
 
+            // --- CODE ที่แก้ไข: เพิ่มฟังก์ชันเลือกทั้งหมดใน showFilterPanel ---
             function showFilterPanel(headerElement) {
                 currentField = headerElement.dataset.field;
                 const filterType = headerElement.dataset.filterType || 'single';
-                let uniqueValues = [...new Set(processedData.map(item => item[currentField]))].filter(item => item != null && item !== '');
+                
+                let uniqueValues = [...new Set(processedData.map(item => item[currentField] || ''))];
                 
                 if (currentField === 'Solution') {
                     uniqueValues = uniqueValues.filter(item => {
@@ -558,7 +548,7 @@
                 
                 uniqueValues.sort();
                 filterPanelTitle.textContent = `Actions for ${currentField}`;
-                filterPanelBody.innerHTML = '';
+                filterPanelBody.innerHTML = ''; // ล้างข้อมูลเก่า
                 const sortButtonsHtml = ` <div class="filter-panel-sort"> <div class="btn-group w-100" role="group"> <button type="button" class="btn btn-sm btn-outline-secondary" id="sort-asc-btn"><i class="fas fa-arrow-up-a-z"></i> A-Z</button> <button type="button" class="btn btn-sm btn-outline-secondary" id="sort-desc-btn"><i class="fas fa-arrow-down-z-a"></i> Z-A</button> <button type="button" class="btn btn-sm btn-outline-danger" id="clear-sort-btn"><i class="fas fa-times"></i> Clear</button> </div> </div> `;
                 const filterPanelHeader = filterPanel.querySelector('.filter-panel-header');
                 if (filterPanelHeader) {
@@ -572,10 +562,40 @@
                 if (newSortAscBtn) { newSortAscBtn.addEventListener('click', () => { sortState = { field: currentField, direction: 'asc' }; updateTableDisplay(); hideFilterPanel(); }); }
                 if (newSortDescBtn) { newSortDescBtn.addEventListener('click', () => { sortState = { field: currentField, direction: 'desc' }; updateTableDisplay(); hideFilterPanel(); }); }
                 if (newClearSortBtn) { newClearSortBtn.addEventListener('click', () => { sortState = { field: null, direction: 'none' }; updateTableDisplay(); hideFilterPanel(); }); }
+                
                 if (filterType === 'multi') {
+                    // --- เพิ่มปุ่ม เลือกทั้งหมด/ยกเลิกทั้งหมด ---
+                    const actionButtonsHtml = `
+                        <div class="d-flex justify-content-end gap-2 mb-2">
+                            <button type="button" class="btn btn-link btn-sm p-0" id="select-all-filter-btn">เลือกทั้งหมด</button>
+                            <button type="button" class="btn btn-link btn-sm p-0" id="deselect-all-filter-btn">ยกเลิกทั้งหมด</button>
+                        </div>
+                    `;
+                    filterPanelBody.innerHTML += actionButtonsHtml;
+
+                    // สร้าง container สำหรับให้ checkbox scroll ได้
+                    const valuesContainer = document.createElement('div');
+                    valuesContainer.style.maxHeight = '180px';
+                    valuesContainer.style.overflowY = 'auto';
+                    filterPanelBody.appendChild(valuesContainer);
+                    // --- จบส่วนเพิ่มปุ่ม ---
+
                     uniqueValues.forEach(val => {
                         const isChecked = activeFilters[currentField]?.includes(val) ? 'checked' : '';
-                        filterPanelBody.innerHTML += `<div class="form-check"><input class="form-check-input" type="checkbox" value="${val}" id="check-${val}" ${isChecked}><label class="form-check-label" for="check-${val}">${val}</label></div>`;
+                        const displayValue = val === '' ? '(ค่าว่าง)' : val;
+                        const uniqueId = `check-${currentField}-${val.replace(/[^a-zA-Z0-9]/g, "")}`;
+                        
+                        // เพิ่ม checkbox ลงใน container ที่สร้างไว้
+                        valuesContainer.innerHTML += `<div class="form-check"><input class="form-check-input" type="checkbox" value="${val}" id="${uniqueId}" ${isChecked}><label class="form-check-label" for="${uniqueId}">${displayValue}</label></div>`;
+                    });
+
+                    // --- เพิ่ม Event Listener ให้กับปุ่มที่สร้างขึ้น ---
+                    document.getElementById('select-all-filter-btn')?.addEventListener('click', () => {
+                        filterPanelBody.querySelectorAll('.form-check-input').forEach(cb => cb.checked = true);
+                    });
+
+                    document.getElementById('deselect-all-filter-btn')?.addEventListener('click', () => {
+                        filterPanelBody.querySelectorAll('.form-check-input').forEach(cb => cb.checked = false);
                     });
                 }
                 const headerRect = headerElement.getBoundingClientRect();
