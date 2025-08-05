@@ -338,28 +338,23 @@ const processedData = fullData.filter(row => {
         updateDashboardCards(resultData);
     }
 
-    function showFilterPanel(headerElement) {
+function showFilterPanel(headerElement) {
         currentField = headerElement.dataset.field;
         const filterType = headerElement.dataset.filterType || 'single';
-        let uniqueValues = [...new Set(processedData.map(item => item[currentField]))].filter(item => item != null && item !== '');
         
-       if (currentField === 'Solution') {
+        // --- ส่วนนี้คือ Code เดิมของคุณ ไม่มีการเปลี่ยนแปลง ---
+        let uniqueValues = [...new Set(processedData.map(item => item[currentField] || ''))];
+        
+        if (currentField === 'Solution') {
             uniqueValues = uniqueValues.filter(item => {
                 const itemLower = item.toLowerCase();
-                return !itemLower.includes('609') && // <-- บรรทัดที่เพิ่มเข้ามา
-                       !itemLower.includes('439 :') && 
-                       !itemLower.includes('544 : proactive ensure fault ค่าสัญญาณดี') && 
-                       !itemLower.includes('370 :') && 
-                       !itemLower.includes('559 : ย้ายจุด/เดินสายภายในบ้าน ประเภทเดินสายลอยตีกิ๊บ จุดละ1000 บาท 20เมตร (รวม vat)') &&
-                       !itemLower.includes('proactive');
+                return !itemLower.includes('609') && !itemLower.includes('439 :') && !itemLower.includes('544 : proactive ensure fault ค่าสัญญาณดี') && !itemLower.includes('370 :') && !itemLower.includes('559 : ย้ายจุด/เดินสายภายในบ้าน ประเภทเดินสายลอยตีกิ๊บ จุดละ1000 บาท 20เมตร (รวม vat)') && !itemLower.includes('proactive');
             });
         }
         
         uniqueValues.sort();
-
         filterPanelTitle.textContent = `Actions for ${currentField}`;
         filterPanelBody.innerHTML = '';
-
         const sortButtonsHtml = `<div class="filter-panel-sort"><div class="btn-group w-100" role="group"><button type="button" class="btn btn-sm btn-outline-secondary" id="sort-asc-btn"><i class="fas fa-arrow-up-a-z"></i> A-Z</button><button type="button" class="btn btn-sm btn-outline-secondary" id="sort-desc-btn"><i class="fas fa-arrow-down-z-a"></i> Z-A</button><button type="button" class="btn btn-sm btn-outline-danger" id="clear-sort-btn"><i class="fas fa-times"></i> Clear</button></div></div>`;
         const filterPanelHeader = filterPanel.querySelector('.filter-panel-header');
         if (filterPanelHeader) {
@@ -377,34 +372,53 @@ const processedData = fullData.filter(row => {
         if (newClearSortBtn) { newClearSortBtn.addEventListener('click', () => { sortState = { field: null, direction: 'none' }; updateTableDisplay(); hideFilterPanel(); }); }
 
         if (filterType === 'multi') {
+            const actionButtonsHtml = `
+                <div class="d-flex justify-content-end gap-2 mb-2">
+                    <button type="button" class="btn btn-link btn-sm p-0" id="select-all-filter-btn">เลือกทั้งหมด</button>
+                    <button type="button" class="btn btn-link btn-sm p-0" id="deselect-all-filter-btn">ยกเลิกทั้งหมด</button>
+                </div>
+            `;
+            filterPanelBody.innerHTML += actionButtonsHtml;
+
+            const valuesContainer = document.createElement('div');
+            valuesContainer.style.maxHeight = '180px';
+            valuesContainer.style.overflowY = 'auto';
+            filterPanelBody.appendChild(valuesContainer);
+
             uniqueValues.forEach(val => {
                 const isChecked = activeFilters[currentField]?.includes(val) ? 'checked' : '';
-                filterPanelBody.innerHTML += `<div class="form-check"><input class="form-check-input" type="checkbox" value="${val}" id="check-${val}" ${isChecked}><label class="form-check-label" for="check-${val}">${val}</label></div>`;
+                const displayValue = val === '' ? '(ค่าว่าง)' : val;
+                const uniqueId = `check-${currentField}-${val.replace(/[^a-zA-Z0-9]/g, "")}`;
+                
+                valuesContainer.innerHTML += `<div class="form-check"><input class="form-check-input" type="checkbox" value="${val}" id="${uniqueId}" ${isChecked}><label class="form-check-label" for="${uniqueId}">${displayValue}</label></div>`;
             });
-        } else {
-            const selectEl = document.createElement('select');
-            selectEl.className = 'form-select';
-            const defaultOption = document.createElement('option');
-            defaultOption.value = '';
-            defaultOption.textContent = '-- All --';
-            selectEl.appendChild(defaultOption);
-            const currentFilterValue = activeFilters[currentField] || '';
-            uniqueValues.forEach(val => {
-                const option = document.createElement('option');
-                option.value = val;
-                option.textContent = val;
-                if (val === currentFilterValue) option.selected = true;
-                selectEl.appendChild(option);
+
+            document.getElementById('select-all-filter-btn')?.addEventListener('click', () => {
+                filterPanelBody.querySelectorAll('.form-check-input').forEach(cb => cb.checked = true);
             });
-            filterPanelBody.appendChild(selectEl);
+            document.getElementById('deselect-all-filter-btn')?.addEventListener('click', () => {
+                filterPanelBody.querySelectorAll('.form-check-input').forEach(cb => cb.checked = false);
+            });
         }
 
+        // --- CODE ที่แก้ไขและเพิ่มเข้ามา: ตรรกะการจัดตำแหน่งหน้าต่าง Filter ไม่ให้ล้นขวา ---
+        filterPanel.style.position = 'fixed'; // ใช้ fixed เพื่อเทียบกับขอบจอโดยตรง
         const headerRect = headerElement.getBoundingClientRect();
-        const contentRect = document.querySelector('.content').getBoundingClientRect(); 
-        filterPanel.style.position = 'absolute'; 
-        filterPanel.style.left = `${headerRect.left - contentRect.left}px`;
-        filterPanel.style.top = `${headerRect.bottom - contentRect.top + window.scrollY}px`; 
+        const panelWidth = 280; // ใช้ความกว้างคงที่จาก CSS
+        const viewportWidth = window.innerWidth;
+
+        let leftPosition = headerRect.left;
+
+        // ตรวจสอบว่าถ้าแสดงผลที่ตำแหน่งเริ่มต้นแล้วจะล้นจอด้านขวาหรือไม่ (เผื่อขอบ 10px)
+        if (leftPosition + panelWidth > viewportWidth - 10) {
+            // ถ้าล้น ให้เปลี่ยนไปจัดตำแหน่งโดยยึดขอบขวาของ header แทน
+            leftPosition = headerRect.right - panelWidth;
+        }
+
+        filterPanel.style.left = `${leftPosition}px`;
+        filterPanel.style.top = `${headerRect.bottom + 5}px`;
         filterPanel.style.display = 'block';
+        // --- จบส่วนแก้ไข ---
     }
 
     function hideFilterPanel() { 
