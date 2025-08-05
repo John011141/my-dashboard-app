@@ -533,76 +533,88 @@
             }
 
             // --- CODE ที่แก้ไข: เพิ่มฟังก์ชันเลือกทั้งหมดใน showFilterPanel ---
-            function showFilterPanel(headerElement) {
-                currentField = headerElement.dataset.field;
-                const filterType = headerElement.dataset.filterType || 'single';
-                
-                let uniqueValues = [...new Set(processedData.map(item => item[currentField] || ''))];
-                
-                if (currentField === 'Solution') {
-                    uniqueValues = uniqueValues.filter(item => {
-                        const itemLower = item.toLowerCase();
-                        return !itemLower.includes('609') && !itemLower.includes('439 :') && !itemLower.includes('544 : proactive ensure fault ค่าสัญญาณดี') && !itemLower.includes('370 :') && !itemLower.includes('559 : ย้ายจุด/เดินสายภายในบ้าน ประเภทเดินสายลอยตีกิ๊บ จุดละ1000 บาท 20เมตร (รวม vat)') && !itemLower.includes('proactive');
-                    });
-                }
-                
-                uniqueValues.sort();
-                filterPanelTitle.textContent = `Actions for ${currentField}`;
-                filterPanelBody.innerHTML = ''; // ล้างข้อมูลเก่า
-                const sortButtonsHtml = ` <div class="filter-panel-sort"> <div class="btn-group w-100" role="group"> <button type="button" class="btn btn-sm btn-outline-secondary" id="sort-asc-btn"><i class="fas fa-arrow-up-a-z"></i> A-Z</button> <button type="button" class="btn btn-sm btn-outline-secondary" id="sort-desc-btn"><i class="fas fa-arrow-down-z-a"></i> Z-A</button> <button type="button" class="btn btn-sm btn-outline-danger" id="clear-sort-btn"><i class="fas fa-times"></i> Clear</button> </div> </div> `;
-                const filterPanelHeader = filterPanel.querySelector('.filter-panel-header');
-                if (filterPanelHeader) {
-                    const existingSortPanel = filterPanel.querySelector('.filter-panel-sort');
-                    if (existingSortPanel) { existingSortPanel.remove(); }
-                    filterPanelHeader.insertAdjacentHTML('afterend', sortButtonsHtml);
-                }
-                const newSortAscBtn = document.getElementById('sort-asc-btn');
-                const newSortDescBtn = document.getElementById('sort-desc-btn');
-                const newClearSortBtn = document.getElementById('clear-sort-btn');
-                if (newSortAscBtn) { newSortAscBtn.addEventListener('click', () => { sortState = { field: currentField, direction: 'asc' }; updateTableDisplay(); hideFilterPanel(); }); }
-                if (newSortDescBtn) { newSortDescBtn.addEventListener('click', () => { sortState = { field: currentField, direction: 'desc' }; updateTableDisplay(); hideFilterPanel(); }); }
-                if (newClearSortBtn) { newClearSortBtn.addEventListener('click', () => { sortState = { field: null, direction: 'none' }; updateTableDisplay(); hideFilterPanel(); }); }
-                
-                if (filterType === 'multi') {
-                    // --- เพิ่มปุ่ม เลือกทั้งหมด/ยกเลิกทั้งหมด ---
-                    const actionButtonsHtml = `
-                        <div class="d-flex justify-content-end gap-2 mb-2">
-                            <button type="button" class="btn btn-link btn-sm p-0" id="select-all-filter-btn">เลือกทั้งหมด</button>
-                            <button type="button" class="btn btn-link btn-sm p-0" id="deselect-all-filter-btn">ยกเลิกทั้งหมด</button>
-                        </div>
-                    `;
-                    filterPanelBody.innerHTML += actionButtonsHtml;
+           function showFilterPanel(headerElement) {
+        currentField = headerElement.dataset.field;
+        const filterType = headerElement.dataset.filterType || 'single';
+        
+        // --- ส่วนนี้คือ Code เดิมของคุณ ไม่มีการเปลี่ยนแปลง ---
+        let uniqueValues = [...new Set(processedData.map(item => item[currentField] || ''))];
+        
+        if (currentField === 'Solution') {
+            uniqueValues = uniqueValues.filter(item => {
+                const itemLower = item.toLowerCase();
+                return !itemLower.includes('609') && !itemLower.includes('439 :') && !itemLower.includes('544 : proactive ensure fault ค่าสัญญาณดี') && !itemLower.includes('370 :') && !itemLower.includes('559 : ย้ายจุด/เดินสายภายในบ้าน ประเภทเดินสายลอยตีกิ๊บ จุดละ1000 บาท 20เมตร (รวม vat)') && !itemLower.includes('proactive');
+            });
+        }
+        
+        uniqueValues.sort();
+        filterPanelTitle.textContent = `Actions for ${currentField}`;
+        filterPanelBody.innerHTML = '';
+        const sortButtonsHtml = `<div class="filter-panel-sort"><div class="btn-group w-100" role="group"><button type="button" class="btn btn-sm btn-outline-secondary" id="sort-asc-btn"><i class="fas fa-arrow-up-a-z"></i> A-Z</button><button type="button" class="btn btn-sm btn-outline-secondary" id="sort-desc-btn"><i class="fas fa-arrow-down-z-a"></i> Z-A</button><button type="button" class="btn btn-sm btn-outline-danger" id="clear-sort-btn"><i class="fas fa-times"></i> Clear</button></div></div>`;
+        const filterPanelHeader = filterPanel.querySelector('.filter-panel-header');
+        if (filterPanelHeader) {
+            const existingSortPanel = filterPanel.querySelector('.filter-panel-sort');
+            if (existingSortPanel) { existingSortPanel.remove(); }
+            filterPanelHeader.insertAdjacentHTML('afterend', sortButtonsHtml); 
+        }
+        
+        const newSortAscBtn = document.getElementById('sort-asc-btn');
+        const newSortDescBtn = document.getElementById('sort-desc-btn');
+        const newClearSortBtn = document.getElementById('clear-sort-btn');
 
-                    // สร้าง container สำหรับให้ checkbox scroll ได้
-                    const valuesContainer = document.createElement('div');
-                    valuesContainer.style.maxHeight = '180px';
-                    valuesContainer.style.overflowY = 'auto';
-                    filterPanelBody.appendChild(valuesContainer);
-                    // --- จบส่วนเพิ่มปุ่ม ---
+        if (newSortAscBtn) { newSortAscBtn.addEventListener('click', () => { sortState = { field: currentField, direction: 'asc' }; updateTableDisplay(); hideFilterPanel(); }); }
+        if (newSortDescBtn) { newSortDescBtn.addEventListener('click', () => { sortState = { field: currentField, direction: 'desc' }; updateTableDisplay(); hideFilterPanel(); }); }
+        if (newClearSortBtn) { newClearSortBtn.addEventListener('click', () => { sortState = { field: null, direction: 'none' }; updateTableDisplay(); hideFilterPanel(); }); }
 
-                    uniqueValues.forEach(val => {
-                        const isChecked = activeFilters[currentField]?.includes(val) ? 'checked' : '';
-                        const displayValue = val === '' ? '(ค่าว่าง)' : val;
-                        const uniqueId = `check-${currentField}-${val.replace(/[^a-zA-Z0-9]/g, "")}`;
-                        
-                        // เพิ่ม checkbox ลงใน container ที่สร้างไว้
-                        valuesContainer.innerHTML += `<div class="form-check"><input class="form-check-input" type="checkbox" value="${val}" id="${uniqueId}" ${isChecked}><label class="form-check-label" for="${uniqueId}">${displayValue}</label></div>`;
-                    });
+        if (filterType === 'multi') {
+            const actionButtonsHtml = `
+                <div class="d-flex justify-content-end gap-2 mb-2">
+                    <button type="button" class="btn btn-link btn-sm p-0" id="select-all-filter-btn">เลือกทั้งหมด</button>
+                    <button type="button" class="btn btn-link btn-sm p-0" id="deselect-all-filter-btn">ยกเลิกทั้งหมด</button>
+                </div>
+            `;
+            filterPanelBody.innerHTML += actionButtonsHtml;
 
-                    // --- เพิ่ม Event Listener ให้กับปุ่มที่สร้างขึ้น ---
-                    document.getElementById('select-all-filter-btn')?.addEventListener('click', () => {
-                        filterPanelBody.querySelectorAll('.form-check-input').forEach(cb => cb.checked = true);
-                    });
+            const valuesContainer = document.createElement('div');
+            valuesContainer.style.maxHeight = '180px';
+            valuesContainer.style.overflowY = 'auto';
+            filterPanelBody.appendChild(valuesContainer);
 
-                    document.getElementById('deselect-all-filter-btn')?.addEventListener('click', () => {
-                        filterPanelBody.querySelectorAll('.form-check-input').forEach(cb => cb.checked = false);
-                    });
-                }
-                const headerRect = headerElement.getBoundingClientRect();
-                filterPanel.style.left = `${headerRect.left}px`;
-                filterPanel.style.top = `${headerRect.bottom + 5}px`;
-                filterPanel.style.display = 'block';
-            }
+            uniqueValues.forEach(val => {
+                const isChecked = activeFilters[currentField]?.includes(val) ? 'checked' : '';
+                const displayValue = val === '' ? '(ค่าว่าง)' : val;
+                const uniqueId = `check-${currentField}-${val.replace(/[^a-zA-Z0-9]/g, "")}`;
+                
+                valuesContainer.innerHTML += `<div class="form-check"><input class="form-check-input" type="checkbox" value="${val}" id="${uniqueId}" ${isChecked}><label class="form-check-label" for="${uniqueId}">${displayValue}</label></div>`;
+            });
+
+            document.getElementById('select-all-filter-btn')?.addEventListener('click', () => {
+                filterPanelBody.querySelectorAll('.form-check-input').forEach(cb => cb.checked = true);
+            });
+            document.getElementById('deselect-all-filter-btn')?.addEventListener('click', () => {
+                filterPanelBody.querySelectorAll('.form-check-input').forEach(cb => cb.checked = false);
+            });
+        }
+
+        // --- CODE ที่แก้ไขและเพิ่มเข้ามา: ตรรกะการจัดตำแหน่งหน้าต่าง Filter ไม่ให้ล้นขวา ---
+        filterPanel.style.position = 'fixed'; // ใช้ fixed เพื่อเทียบกับขอบจอโดยตรง
+        const headerRect = headerElement.getBoundingClientRect();
+        const panelWidth = 280; // ใช้ความกว้างคงที่จาก CSS
+        const viewportWidth = window.innerWidth;
+
+        let leftPosition = headerRect.left;
+
+        // ตรวจสอบว่าถ้าแสดงผลที่ตำแหน่งเริ่มต้นแล้วจะล้นจอด้านขวาหรือไม่ (เผื่อขอบ 10px)
+        if (leftPosition + panelWidth > viewportWidth - 10) {
+            // ถ้าล้น ให้เปลี่ยนไปจัดตำแหน่งโดยยึดขอบขวาของ header แทน
+            leftPosition = headerRect.right - panelWidth;
+        }
+
+        filterPanel.style.left = `${leftPosition}px`;
+        filterPanel.style.top = `${headerRect.bottom + 5}px`;
+        filterPanel.style.display = 'block';
+        // --- จบส่วนแก้ไข ---
+    }
 
             function hideFilterPanel() { if (filterPanel) { filterPanel.style.display = 'none'; } currentField = null; }
             function updateHeaderStyles() { document.querySelectorAll('.filterable-header').forEach(h => { const field = h.dataset.field; h.classList.toggle('active-filter', !!(activeFilters[field] && (!Array.isArray(activeFilters[field]) || activeFilters[field].length > 0))); h.classList.toggle('active-sort', sortState.field === field && sortState.direction !== 'none'); const icon = h.querySelector('.sort-icon'); if (icon) { if (sortState.field === field && sortState.direction === 'asc') { icon.className = 'sort-icon fas fa-arrow-up'; } else if (sortState.field === field && sortState.direction === 'desc') { icon.className = 'sort-icon fas fa-arrow-down'; } else { icon.className = 'sort-icon fas fa-sort'; } } }); }
